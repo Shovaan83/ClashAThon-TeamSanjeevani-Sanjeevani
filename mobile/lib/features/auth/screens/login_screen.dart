@@ -1,7 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:sanjeevani/config/exception/api_exception.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
+import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
+import 'package:sanjeevani/core/service/api_service.dart';
 import 'package:sanjeevani/shared/utils/controllers/login_controller.dart';
 import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
@@ -31,18 +34,32 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Call ApiService().post(ApiEndpoints.login, body: { ... })
-      // On success: await ApiService().setAuthToken(response['access']);
-      await Future.delayed(const Duration(seconds: 2)); // placeholder
+      final response = await ApiService().post(
+        ApiEndpoints.login,
+        body: {'email': _controller.email, 'password': _controller.password},
+      );
+
+      // Backend returns { status, message, data: { access, refresh } }
+      final data = response['data'] as Map<String, dynamic>;
+      await ApiService().saveTokens(
+        access: data['access'] as String,
+        refresh: data['refresh'] as String,
+      );
 
       if (mounted) {
         Navigator.pushReplacementNamed(context, AppRoutes.home);
       }
-    } catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -140,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 8),
 
-                // ── Forgot password ──────────────────────────────────────
+                //  Forgot password 
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(

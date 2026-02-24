@@ -6,7 +6,7 @@ import '../constants/api_base_url.dart';
 import '../../config/storage/storage_service.dart';
 
 class ApiService {
-  // Singleton 
+  // Singleton
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
@@ -14,23 +14,37 @@ class ApiService {
   final StorageService _storage = StorageService();
   String? _authToken;
 
-  // Call once at app start 
+  // Call once at app start
   Future<void> init() async {
     _authToken = await _storage.getAuthToken();
   }
 
-  // Token management 
+  // Token management
   Future<void> setAuthToken(String token) async {
     _authToken = token;
     await _storage.saveAuthToken(token);
   }
 
+  Future<void> setRefreshToken(String token) async {
+    await _storage.saveRefreshToken(token);
+  }
+
+  /// Stores both access & refresh tokens at once.
+  Future<void> saveTokens({
+    required String access,
+    required String refresh,
+  }) async {
+    await setAuthToken(access);
+    await setRefreshToken(refresh);
+  }
+
   Future<void> clearAuthToken() async {
     _authToken = null;
     await _storage.clearAuthToken();
+    await _storage.clearRefreshToken();
   }
 
-  // Headers 
+  // Headers
   Map<String, String> _buildHeaders({bool requiresAuth = false}) {
     return {
       'Content-Type': 'application/json',
@@ -40,7 +54,7 @@ class ApiService {
     };
   }
 
-  // URI builder 
+  // URI builder
   Uri _buildUri(String endpoint, [Map<String, dynamic>? queryParams]) {
     final uri = Uri.parse('${ApiBaseUrl.baseUrl}$endpoint');
     if (queryParams != null && queryParams.isNotEmpty) {
@@ -51,7 +65,7 @@ class ApiService {
     return uri;
   }
 
-  // Response parser 
+  // Response parser
   dynamic _parseResponse(http.Response response) {
     final body = utf8.decode(response.bodyBytes);
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -83,7 +97,7 @@ class ApiService {
     return _parseResponse(response);
   }
 
-  // POST 
+  // POST
   Future<dynamic> post(
     String endpoint, {
     Map<String, dynamic>? body,
@@ -99,7 +113,7 @@ class ApiService {
     return _parseResponse(response);
   }
 
-  // PUT 
+  // PUT
   Future<dynamic> put(
     String endpoint, {
     Map<String, dynamic>? body,
@@ -115,7 +129,7 @@ class ApiService {
     return _parseResponse(response);
   }
 
-  // PATCH 
+  // PATCH
   Future<dynamic> patch(
     String endpoint, {
     Map<String, dynamic>? body,
@@ -131,7 +145,7 @@ class ApiService {
     return _parseResponse(response);
   }
 
-  // DELETE 
+  // DELETE
   Future<dynamic> delete(
     String endpoint, {
     Map<String, dynamic>? body,
@@ -147,4 +161,3 @@ class ApiService {
     return _parseResponse(response);
   }
 }
-
