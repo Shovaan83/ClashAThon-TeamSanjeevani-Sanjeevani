@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'accounts',
     'rest_framework_simplejwt',
-    'celery'
+    'celery',
+    'pharmacy',
 ]
 
 MIDDLEWARE = [

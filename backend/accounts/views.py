@@ -4,8 +4,8 @@ from django.shortcuts import render
 from rest_framework import viewsets
 
 from rest_framework import generics
-from .models import Pharmacy,CustomUser
-from .serializers import RegisterPharmacySerializer
+from .models import CustomUser
+# from .serializers import RegisterPharmacySerializer
 from utils.response import ResponseMixin
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
@@ -61,23 +61,7 @@ class VerifyOtpEmail(ResponseMixin,APIView):
             otp:otp
         },message="Otp verified successfully")
 
-class PharmacyViewSet(ResponseMixin, viewsets.ModelViewSet):
-    queryset = Pharmacy.objects.all()
-    serializer_class = RegisterPharmacySerializer
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-
-        if not serializer.is_valid():
-            return self.validation_error_response(errors=serializer.errors,message="something went wrong")
-
-        pharmacy = serializer.save()
-
-        return self.success_response(
-            data=serializer.data,
-            message="Pharmacy registered successfully",
-            status_code=status.HTTP_201_CREATED
-        )
 
 
 class LoginView(ResponseMixin,APIView):
