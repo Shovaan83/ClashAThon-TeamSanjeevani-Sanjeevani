@@ -1,16 +1,18 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import AuthLayout from './layouts/AuthLayout';
-import SignupPage from './features/auth/pages/SignupPage';
-import LoginPage from './features/auth/pages/LoginPage';
-import HomePage from './features/home/pages/HomePage';
-import PatientDashboardPage from './features/home/pages/PatientDashboardPage';
-import PharmacyDashboardPage from './features/home/pages/PharmacyDashboardPage';
-import DevTools from './components/DevTools';
-import { useAuthStore } from './store/useAuthStore';
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import AuthLayout from "./layouts/AuthLayout";
+import SignupPage from "./features/auth/pages/SignupPage";
+import LoginPage from "./features/auth/pages/LoginPage";
+import HomePage from "./features/home/pages/HomePage";
+import PatientDashboardPage from "./features/home/pages/PatientDashboardPage";
+import PharmacyDashboardPage from "./features/home/pages/PharmacyDashboardPage";
+import PharmacyProfile from "./pages/PharmacyProfile/PharmacyProfile";
+import DevTools from "./components/DevTools";
+import { useAuthStore } from "./store/useAuthStore";
 
 function DashboardRedirect() {
   const { user } = useAuthStore();
-  if (user?.role === 'pharmacy') return <Navigate to="/dashboard/pharmacy" replace />;
+  if (user?.role === "pharmacy")
+    return <Navigate to="/dashboard/pharmacy" replace />;
   return <Navigate to="/dashboard/patient" replace />;
 }
 
@@ -26,6 +28,9 @@ export default function App() {
 
         {/* Landing */}
         <Route path="/home" element={<HomePage />} />
+
+        {/* Pharmacy Profile */}
+        <Route path="/pharmacy/:id" element={<PharmacyProfile />} />
 
         {/* Role-specific dashboards */}
         <Route path="/dashboard/patient" element={<PatientDashboardPage />} />
