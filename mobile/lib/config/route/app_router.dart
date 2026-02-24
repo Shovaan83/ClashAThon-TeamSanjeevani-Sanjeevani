@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
 import 'package:sanjeevani/features/auth/screens/login_screen.dart';
 import 'package:sanjeevani/features/auth/screens/signup_screen.dart';
-import 'package:sanjeevani/features/auth/screens/splash_screen.dart';
+import 'package:sanjeevani/features/static/splash_screen.dart';
 import 'package:sanjeevani/features/home/screens/home_screen.dart';
 
 class AppRouter {
