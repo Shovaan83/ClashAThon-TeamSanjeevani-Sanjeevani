@@ -30,3 +30,17 @@ body {
 .animate-caret-blink {
   animation: caret-blink 1.25s ease-out infinite;
 }
+
+@keyframes radar-beam {
+  0%   { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.animate-radar-beam {
+  animation: radar-beam 2.4s ease-out infinite;
+}
+.animate-radar-beam-delay-1 {
+  animation: radar-beam 2.4s ease-out 0.8s infinite;
+}
+.animate-radar-beam-delay-2 {
+  animation: radar-beam 2.4s ease-out 1.6s infinite;
+}

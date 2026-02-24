@@ -3,6 +3,16 @@ import AuthLayout from './layouts/AuthLayout';
 import SignupPage from './features/auth/pages/SignupPage';
 import LoginPage from './features/auth/pages/LoginPage';
 import HomePage from './features/home/pages/HomePage';
+import PatientDashboardPage from './features/home/pages/PatientDashboardPage';
+import PharmacyDashboardPage from './features/home/pages/PharmacyDashboardPage';
+import DevTools from './components/DevTools';
+import { useAuthStore } from './store/useAuthStore';
+
+function DashboardRedirect() {
+  const { user } = useAuthStore();
+  if (user?.role === 'pharmacy') return <Navigate to="/dashboard/pharmacy" replace />;
+  return <Navigate to="/dashboard/patient" replace />;
+}
 
 export default function App() {
   return (
@@ -14,16 +24,19 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
         </Route>
 
-        {/* Home page — generic for both patient and pharmacy */}
+        {/* Landing */}
         <Route path="/home" element={<HomePage />} />
-        <Route path="/dashboard/patient" element={<Navigate to="/home" replace />} />
-        <Route path="/dashboard/pharmacy" element={<Navigate to="/home" replace />} />
-        <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+
+        {/* Role-specific dashboards */}
+        <Route path="/dashboard/patient" element={<PatientDashboardPage />} />
+        <Route path="/dashboard/pharmacy" element={<PharmacyDashboardPage />} />
+        <Route path="/dashboard" element={<DashboardRedirect />} />
 
         {/* Default redirects */}
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
+      <DevTools />
     </BrowserRouter>
   );
 }
