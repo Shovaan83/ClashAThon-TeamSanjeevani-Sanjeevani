@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:sanjeevani/config/theme/app_theme.dart';
-import 'package:sanjeevani/core/constants/routes.dart';
-import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:sanjeevani/config/exception/api_exception.dart';
+import 'package:sanjeevani/config/theme/app_theme.dart';
+import 'package:sanjeevani/core/constants/api_endpoints.dart';
+import 'package:sanjeevani/core/constants/routes.dart';
+import 'package:sanjeevani/core/service/api_service.dart';
+import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
 import 'package:sanjeevani/shared/widgets/app_text_field.dart';
 import 'package:sanjeevani/shared/widgets/location_picker.dart';
@@ -76,21 +79,35 @@ class _SignupDetailsScreenState extends State<SignupDetailsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Call ApiService().post(ApiEndpoints.register, body: {
-      //   'email': _email,
-      //   'name': _nameController.text.trim(),
-      //   'phone': _phoneController.text.trim(),
-      //   'password': _passwordController.text,
-      //   'role': _role.name,
-      //   if (_role == UserRole.pharmacy) ...{
-      //     'latitude': _latitude,
-      //     'longitude': _longitude,
-      //   },
-      // })
-      await Future.delayed(const Duration(seconds: 2)); // placeholder
+      if (_role == UserRole.pharmacy) {
+        // Pharmacy registration with nested user object + location
+        await ApiService().post(
+          ApiEndpoints.registerPharmacy,
+          body: {
+            'user': {
+              'email': _email,
+              'password': _passwordController.text,
+              'name': _nameController.text.trim(),
+              'phone_number': _phoneController.text.trim(),
+            },
+            if (_hasLocation) 'lat': _latitude,
+            if (_hasLocation) 'lng': _longitude,
+          },
+        );
+      } else {
+        // Patient / other role registration
+        await ApiService().post(
+          ApiEndpoints.register,
+          body: {
+            'email': _email,
+            'password': _passwordController.text,
+            'name': _nameController.text.trim(),
+            'phone_number': _phoneController.text.trim(),
+          },
+        );
+      }
 
       if (mounted) {
-        // Navigate to login after successful registration
         Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.loginScreen,
@@ -102,11 +119,19 @@ class _SignupDetailsScreenState extends State<SignupDetailsScreen> {
           ),
         );
       }
-    } catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration failed. Please try again.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

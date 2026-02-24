@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'accounts',
     'rest_framework_simplejwt',
     'celery',
+    'django_celery_results',
     'pharmacy',
 ]
 
@@ -151,9 +152,13 @@ EMAIL_HOST_USER = config.get("EMAIL_HOST_USER")
 
 EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD")
 
+# Celery Configuration
+CELERY_BROKER_URL = 'memory://'  # Simple in-memory broker for development
+CELERY_RESULT_BACKEND = 'django-db://'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
 # CORS – allow the Vite dev server to talk to Django
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
 CORS_ALLOW_CREDENTIALS = True
