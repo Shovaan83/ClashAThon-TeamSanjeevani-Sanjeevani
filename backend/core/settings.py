@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import dotenv_values
 
+config = dotenv_values(".env") 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -37,17 +39,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'drf_yasg',
     'accounts',
     'rest_framework_simplejwt',
     'celery',
-    'customer'
+    'django_celery_results',
+    'pharmacy',
+    'medicine',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -143,8 +150,23 @@ EMAIL_USE_TLS = True
 
 EMAIL_PORT = 587
 
-EMAIL_HOST_USER = 'raghavdahal686@gmail.com'
+EMAIL_HOST_USER = config.get("EMAIL_HOST_USER")
 
-EMAIL_HOST_PASSWORD = 'lqqvuerjpcbnjvvo'
+EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD")
 
-CORS_ORIGIN_ALLOW_ALL = True
+# Celery Configuration
+CELERY_BROKER_URL = 'memory://'  # Simple in-memory broker for development
+CELERY_RESULT_BACKEND = 'django-db://'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173","http://127.0.0.1:5173"
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+

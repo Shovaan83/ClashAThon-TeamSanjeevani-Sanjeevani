@@ -4,8 +4,8 @@ from django.shortcuts import render
 from rest_framework import viewsets
 
 from rest_framework import generics
-from .models import Pharmacy,CustomUser
-from .serializers import RegisterPharmacySerializer
+from .models import CustomUser
+# from .serializers import RegisterPharmacySerializer
 from utils.response import ResponseMixin
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
@@ -15,6 +15,7 @@ from utils.email import send_email
 from utils.otp import generate_otp
 from rest_framework.response import Response
 from rest_framework import status
+
 from .models import Otp
 
 class RegisterUserEmail(ResponseMixin,APIView):
@@ -26,16 +27,18 @@ class RegisterUserEmail(ResponseMixin,APIView):
         if check_email:
             return self.validation_error_response(message="Email already exist")
         otp = generate_otp()
-        store_otp = Otp.objects.create(otp=otp,email=email)
+        
+        # Update existing OTP or create new one
+        store_otp, created = Otp.objects.update_or_create(
+            email=email,
+            defaults={'otp': otp, 'is_verified': False}
+        )
 
+        # Send email directly (synchronous) - more reliable for development
         try:
-            send_email_task.delay(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
-        except Exception:
-            try:
-                send_email(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
-            except Exception:
-                return Response({'error': 'Failed to send OTP. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            send_email(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
+        except Exception as e:
+            return Response({'error': f'Failed to send OTP: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({'message': 'OTP sent successfully.'}, status=status.HTTP_200_OK)
     
@@ -61,38 +64,22 @@ class VerifyOtpEmail(ResponseMixin,APIView):
             otp:otp
         },message="Otp verified successfully")
 
-class PharmacyViewSet(ResponseMixin, viewsets.ModelViewSet):
-    queryset = Pharmacy.objects.all()
-    serializer_class = RegisterPharmacySerializer
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-
-        if not serializer.is_valid():
-            return self.validation_error_response(errors=serializer.errors,message="something went wrong")
-
-        pharmacy = serializer.save()
-
-        return self.success_response(
-            data=serializer.data,
-            message="Pharmacy registered successfully",
-            status_code=status.HTTP_201_CREATED
-        )
 
 
 class LoginView(ResponseMixin,APIView):
     def post(self,request):
-        email = request.get('email')
-        password = request.get('password')
+        email = request.data.get('email')
+        password = request.data.get('password')
 
         exist_email = CustomUser.objects.filter(email=email).first()
         if not exist_email:
-            return ResponseMixin.unauthorized_response(message="Email not found")
+            return self.unauthorized_response(message="Email not found")
         
         user_ok = authenticate(username=exist_email,password=password)
         if user_ok is None:
-            return ResponseMixin.unauthorized_response(message="Password not correct")
+            return self.unauthorized_response(message="Password not correct")
         
         token = get_tokens_for_user(user_ok)
-        return ResponseMixin.success_response(data=token,message="Logged in successfully")
+        return self.success_response(data=token,message="Logged in successfully")
     
