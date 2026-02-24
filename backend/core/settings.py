@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-+8u9#7ic@sl12#y1ts!gi^aa-*roa$af*r^a))!_-n4bz26wg$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -38,8 +38,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'core',
     'drf_yasg',
+    'accounts',
+    'rest_framework_simplejwt',
+    'celery'
 ]
 
 MIDDLEWARE = [
@@ -118,3 +120,30 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
+
+REST_FRAMEWORK = {
+
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  
+
+EMAIL_HOST = 'smtp.gmail.com'  
+
+
+EMAIL_USE_TLS = True
+
+EMAIL_PORT = 587
+
+EMAIL_HOST_USER = 'raghavdahal686@gmail.com'
+
+EMAIL_HOST_PASSWORD = 'lqqvuerjpcbnjvvo'
+
+CORS_ORIGIN_ALLOW_ALL = True

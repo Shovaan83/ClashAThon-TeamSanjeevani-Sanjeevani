@@ -38,7 +38,7 @@ class ResponseMixin:
             status_code=status.HTTP_403_FORBIDDEN
         )
 
-    def validation_error_response(self, errors, message="Validation failed"):
+    def validation_error_response(self, errors="", message="Validation failed"):
         return self.error_response(
             message=message,
             error=errors,
