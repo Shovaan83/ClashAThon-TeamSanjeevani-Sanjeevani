@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'accounts',
     'rest_framework_simplejwt',
     'celery',
+    'django_celery_results',
     'pharmacy',
 ]
 
@@ -148,5 +149,13 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = config.get("EMAIL_HOST_USER")
 
 EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD")
+
+# Celery Configuration
+CELERY_BROKER_URL = 'memory://'  # Simple in-memory broker for development
+CELERY_RESULT_BACKEND = 'django-db://'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 CORS_ORIGIN_ALLOW_ALL = True
