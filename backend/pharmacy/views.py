@@ -36,4 +36,12 @@ class PharmacyViewSet(ResponseMixin, viewsets.ModelViewSet):
             status_code=status.HTTP_200_OK
         )
     
+
+class PharmacyFeauturesViewSet(ResponseMixin,viewsets.ModelViewSet):
+    queryset = Pharmacy.objects.all()
+
+    pass
+    
+
+
     
