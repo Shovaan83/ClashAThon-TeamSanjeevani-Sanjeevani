@@ -26,10 +26,7 @@ class _OtpInputFieldState extends State<OtpInputField> {
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-      widget.length,
-      (_) => TextEditingController(),
-    );
+    _controllers = List.generate(widget.length, (_) => TextEditingController());
     _focusNodes = List.generate(widget.length, (_) => FocusNode());
   }
 
