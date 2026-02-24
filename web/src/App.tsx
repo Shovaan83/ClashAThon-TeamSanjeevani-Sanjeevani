@@ -6,12 +6,14 @@ import HomePage from './features/home/pages/HomePage';
 import PatientDashboardPage from './features/home/pages/PatientDashboardPage';
 import PharmacyDashboardPage from './features/home/pages/PharmacyDashboardPage';
 import PatientProfilePage from './features/home/pages/PatientProfilePage';
-import DevTools from './components/DevTools';
-import { useAuthStore } from './store/useAuthStore';
+import PharmacyProfile from "./features/home/pages/PharmacyProfile";
+import DevTools from "./components/DevTools";
+import { useAuthStore } from "./store/useAuthStore";
 
 function DashboardRedirect() {
   const { user } = useAuthStore();
-  if (user?.role === 'pharmacy') return <Navigate to="/dashboard/pharmacy" replace />;
+  if (user?.role === "pharmacy")
+    return <Navigate to="/dashboard/pharmacy" replace />;
   return <Navigate to="/dashboard/patient" replace />;
 }
 
@@ -27,6 +29,9 @@ export default function App() {
 
         {/* Landing */}
         <Route path="/home" element={<HomePage />} />
+
+        {/* Pharmacy Profile */}
+        <Route path="/pharmacy/:id" element={<PharmacyProfile />} />
 
         {/* Role-specific dashboards */}
         <Route path="/dashboard/patient" element={<PatientDashboardPage />} />
