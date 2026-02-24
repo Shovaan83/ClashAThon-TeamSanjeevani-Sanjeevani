@@ -21,12 +21,27 @@ class PharmacyViewSet(ResponseMixin, viewsets.ModelViewSet):
 
         pharmacy = serializer.save()
 
-
-
         return self.success_response(
             data=serializer.data,
             message="Pharmacy registered successfully",
             status_code=status.HTTP_201_CREATED
         )
     
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return self.success_response(
+            data=serializer.data,
+            message="Pharmacy list retrieved successfully",
+            status_code=status.HTTP_200_OK
+        )
+    
+
+class PharmacyFeauturesViewSet(ResponseMixin,viewsets.ModelViewSet):
+    queryset = Pharmacy.objects.all()
+
+    pass
+    
+
+
     
