@@ -15,6 +15,7 @@ from utils.email import send_email
 from utils.otp import generate_otp
 from rest_framework.response import Response
 from rest_framework import status
+
 from .models import Otp
 
 class RegisterUserEmail(ResponseMixin,APIView):
@@ -26,16 +27,18 @@ class RegisterUserEmail(ResponseMixin,APIView):
         if check_email:
             return self.validation_error_response(message="Email already exist")
         otp = generate_otp()
-        store_otp = Otp.objects.create(otp=otp,email=email)
+        
+        # Update existing OTP or create new one
+        store_otp, created = Otp.objects.update_or_create(
+            email=email,
+            defaults={'otp': otp, 'is_verified': False}
+        )
 
+        # Send email directly (synchronous) - more reliable for development
         try:
-            send_email_task.delay(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
-        except Exception:
-            try:
-                send_email(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
-            except Exception:
-                return Response({'error': 'Failed to send OTP. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            send_email(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
+        except Exception as e:
+            return Response({'error': f'Failed to send OTP: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({'message': 'OTP sent successfully.'}, status=status.HTTP_200_OK)
     
