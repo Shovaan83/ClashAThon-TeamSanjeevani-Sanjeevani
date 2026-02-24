@@ -55,7 +55,8 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
         serviceEnabled = await _location.requestService();
         if (!serviceEnabled) {
           setState(() {
-            _errorMessage = 'Location services are disabled';
+            _errorMessage =
+                'Location services are disabled. Tap the map to pick manually.';
             _isLoadingLocation = false;
           });
           return;
@@ -69,33 +70,42 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
         if (permission != PermissionStatus.granted &&
             permission != PermissionStatus.grantedLimited) {
           setState(() {
-            _errorMessage = 'Location permission denied';
+            _errorMessage =
+                'Location permission denied. Tap the map to pick manually.';
             _isLoadingLocation = false;
           });
           return;
         }
       }
 
-      // Get current location
-      final locationData = await _location.getLocation();
+      // Get current location with a timeout
+      final locationData = await _location.getLocation().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('Location request timed out'),
+      );
       if (locationData.latitude != null && locationData.longitude != null) {
         final currentPos = LatLng(
           locationData.latitude!,
           locationData.longitude!,
         );
-        setState(() {
-          if (_pickedLocation == null) {
-            _pickedLocation = currentPos;
-            widget.onLocationPicked(currentPos);
-          }
-        });
-        _mapController.move(
-          _pickedLocation ?? currentPos,
-          15.0,
-        );
+        if (mounted) {
+          setState(() {
+            if (_pickedLocation == null) {
+              _pickedLocation = currentPos;
+              widget.onLocationPicked(currentPos);
+            }
+          });
+          _mapController.move(_pickedLocation ?? currentPos, 15.0);
+        }
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Could not get location');
+      debugPrint('LocationPicker error: $e');
+      if (mounted) {
+        setState(
+          () => _errorMessage =
+              'Could not get location. Tap the map to pick manually.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
@@ -137,11 +147,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.my_location,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
+                    Icon(Icons.my_location, size: 16, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
                       'My Location',

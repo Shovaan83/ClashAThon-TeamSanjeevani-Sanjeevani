@@ -1,11 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
 import 'package:sanjeevani/shared/utils/controllers/signup_controller.dart';
 import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
 import 'package:sanjeevani/shared/widgets/app_text_field.dart';
+import 'package:sanjeevani/shared/widgets/location_picker.dart';
 import 'package:sanjeevani/shared/widgets/role_selector.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -36,11 +38,28 @@ class _SignupScreenState extends State<SignupScreen> {
       );
       return;
     }
+    if (_selectedRole == UserRole.pharmacy && !_controller.hasLocation) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please pin your pharmacy location on the map'),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Call ApiService().post(ApiEndpoints.register, body: { ... })
+      // TODO: Call ApiService().post(ApiEndpoints.register, body: {
+      //   'email': _controller.email,
+      //   'phone': _controller.phone,
+      //   'password': _controller.password,
+      //   'role': _selectedRole.name,
+      //   if (_selectedRole == UserRole.pharmacy) ...{
+      //     'latitude': _controller.latitude,
+      //     'longitude': _controller.longitude,
+      //   },
+      // })
       await Future.delayed(const Duration(seconds: 2)); // placeholder
 
       if (mounted) {
@@ -167,6 +186,20 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
 
                 const SizedBox(height: 16),
+
+                // ── Pharmacy location picker (shown only for pharmacy) ───
+                if (_selectedRole == UserRole.pharmacy) ...[
+                  LocationPickerWidget(
+                    initialLocation: _controller.hasLocation
+                        ? LatLng(_controller.latitude!, _controller.longitude!)
+                        : null,
+                    onLocationPicked: (latLng) {
+                      _controller.latitude = latLng.latitude;
+                      _controller.longitude = latLng.longitude;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // ── Terms checkbox ───────────────────────────────────────
                 Row(
