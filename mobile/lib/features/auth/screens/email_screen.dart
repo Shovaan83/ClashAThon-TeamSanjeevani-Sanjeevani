@@ -1,7 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:sanjeevani/config/exception/api_exception.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
+import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
+import 'package:sanjeevani/core/service/api_service.dart';
 import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
 import 'package:sanjeevani/shared/widgets/app_text_field.dart';
@@ -33,8 +36,10 @@ class _EmailScreenState extends State<EmailScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Call ApiService to send OTP to email
-      await Future.delayed(const Duration(seconds: 1)); // placeholder
+      await ApiService().post(
+        ApiEndpoints.sendOtp,
+        body: {'email': _emailController.text.trim()},
+      );
 
       if (mounted) {
         Navigator.pushNamed(
@@ -46,11 +51,19 @@ class _EmailScreenState extends State<EmailScreen> {
           },
         );
       }
-    } catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong. Please try again.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

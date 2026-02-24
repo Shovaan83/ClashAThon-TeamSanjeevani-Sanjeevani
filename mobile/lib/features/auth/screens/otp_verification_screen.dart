@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:sanjeevani/config/exception/api_exception.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
+import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
+import 'package:sanjeevani/core/service/api_service.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
 import 'package:sanjeevani/shared/widgets/otp_input_field.dart';
 import 'package:sanjeevani/shared/widgets/role_selector.dart';
@@ -63,8 +66,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Call ApiService to verify OTP
-      await Future.delayed(const Duration(seconds: 1)); // placeholder
+      await ApiService().post(
+        ApiEndpoints.verifyOtp,
+        body: {'email': _email, 'otp': _otp},
+      );
 
       if (mounted) {
         Navigator.pushReplacementNamed(
@@ -73,11 +78,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           arguments: {'email': _email, 'role': _role},
         );
       }
-    } catch (e) {
+    } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification failed. Please try again.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -85,12 +98,26 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> _handleResend() async {
-    // TODO: Call ApiService to resend OTP
-    _startResendTimer();
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('OTP resent to your email')));
+    try {
+      await ApiService().post(ApiEndpoints.sendOtp, body: {'email': _email});
+      _startResendTimer();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('OTP resent to your email')),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to resend OTP.')));
+      }
     }
   }
 
