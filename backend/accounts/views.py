@@ -69,17 +69,17 @@ class VerifyOtpEmail(ResponseMixin,APIView):
 
 class LoginView(ResponseMixin,APIView):
     def post(self,request):
-        email = request.get('email')
-        password = request.get('password')
+        email = request.data.get('email')
+        password = request.data.get('password')
 
         exist_email = CustomUser.objects.filter(email=email).first()
         if not exist_email:
-            return ResponseMixin.unauthorized_response(message="Email not found")
+            return self.unauthorized_response(message="Email not found")
         
         user_ok = authenticate(username=exist_email,password=password)
         if user_ok is None:
-            return ResponseMixin.unauthorized_response(message="Password not correct")
+            return self.unauthorized_response(message="Password not correct")
         
         token = get_tokens_for_user(user_ok)
-        return ResponseMixin.success_response(data=token,message="Logged in successfully")
+        return self.success_response(data=token,message="Logged in successfully")
     
