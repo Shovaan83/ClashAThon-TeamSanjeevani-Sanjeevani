@@ -5,6 +5,7 @@ import LoginPage from './features/auth/pages/LoginPage';
 import HomePage from './features/home/pages/HomePage';
 import PatientDashboardPage from './features/home/pages/PatientDashboardPage';
 import PharmacyDashboardPage from './features/home/pages/PharmacyDashboardPage';
+import PatientProfilePage from './features/home/pages/PatientProfilePage';
 import DevTools from './components/DevTools';
 import { useAuthStore } from './store/useAuthStore';
 
@@ -31,6 +32,9 @@ export default function App() {
         <Route path="/dashboard/patient" element={<PatientDashboardPage />} />
         <Route path="/dashboard/pharmacy" element={<PharmacyDashboardPage />} />
         <Route path="/dashboard" element={<DashboardRedirect />} />
+
+        {/* Profile */}
+        <Route path="/profile" element={<PatientProfilePage />} />
 
         {/* Default redirects */}
         <Route path="/" element={<Navigate to="/home" replace />} />
