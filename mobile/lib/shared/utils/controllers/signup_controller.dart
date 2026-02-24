@@ -9,10 +9,16 @@ class SignupController {
   final passwordController = TextEditingController();
   final formKey = GlobalKey<FormState>();
 
+  // Pharmacy location (lat/lng as doubles for backend)
+  double? latitude;
+  double? longitude;
+
   String get name => nameController.text.trim();
   String get email => emailController.text.trim();
   String get phone => phoneController.text.trim();
   String get password => passwordController.text;
+
+  bool get hasLocation => latitude != null && longitude != null;
 
   bool validate() => formKey.currentState?.validate() ?? false;
 
