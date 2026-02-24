@@ -6,14 +6,28 @@ from accounts.models import CustomUser
 from pharmacy.models import Pharmacy
 
 
-class MedicineRequestConsumer(AsyncWebsocketConsumer):
+class CustomerConsumer(AsyncWebsocketConsumer):
     """
-    WebSocket consumer for handling real-time medicine requests
-    Users connect here to send requests and receive responses
+    WebSocket consumer for customers - automatically uses authenticated user
+    Customers receive pharmacy responses here
     """
     
     async def connect(self):
-        self.user_id = self.scope['url_route']['kwargs']['user_id']
+        # Get authenticated user from JWT middleware
+        user = self.scope.get('user')
+        
+        # Reject if not authenticated
+        if not user or user.is_anonymous:
+            await self.close(code=4001)
+            return
+        
+        # Reject if not a customer
+        if user.role != 'CUSTOMER':
+            await self.close(code=4003)
+            return
+        
+        self.user = user
+        self.user_id = str(user.id)
         self.room_group_name = f'user_{self.user_id}'
         
         # Join user's personal room
@@ -27,7 +41,9 @@ class MedicineRequestConsumer(AsyncWebsocketConsumer):
         # Send connection confirmation
         await self.send(text_data=json.dumps({
             'type': 'connection',
-            'message': 'Connected to medicine request channel'
+            'message': 'Connected to customer channel',
+            'user_id': self.user_id,
+            'user_name': user.name
         }))
     
     async def disconnect(self, close_code):
@@ -59,22 +75,45 @@ class MedicineRequestConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'pharmacy_response',
             'request_id': event['request_id'],
-            'status': event['status'],
+            'response_type': event['response_type'],
+            'pharmacy_id': event['pharmacy_id'],
+            'pharmacy_name': event['pharmacy_name'],
+            'pharmacy_location': event['pharmacy_location'],
             'message': event['message'],
             'audio_url': event.get('audio_url'),
-            'pharmacy_name': event['pharmacy_name'],
             'timestamp': event['timestamp']
         }))
 
 
 class PharmacyConsumer(AsyncWebsocketConsumer):
     """
-    WebSocket consumer for pharmacy to receive medicine requests
-    and send responses in real-time
+    WebSocket consumer for pharmacy - automatically uses authenticated user
+    Pharmacies receive medicine request broadcasts here
     """
     
     async def connect(self):
-        self.pharmacy_id = self.scope['url_route']['kwargs']['pharmacy_id']
+        # Get authenticated user from JWT middleware
+        user = self.scope.get('user')
+        
+        # Reject if not authenticated
+        if not user or user.is_anonymous:
+            await self.close(code=4001)
+            return
+        
+        # Reject if not a pharmacy
+        if user.role != 'PHARMACY':
+            await self.close(code=4003)
+            return
+        
+        # Get pharmacy from user
+        pharmacy = await self.get_pharmacy(user)
+        if not pharmacy:
+            await self.close(code=4004)
+            return
+        
+        self.user = user
+        self.pharmacy = pharmacy
+        self.pharmacy_id = str(pharmacy.id)
         self.room_group_name = f'pharmacy_{self.pharmacy_id}'
         
         # Join pharmacy's room
@@ -88,8 +127,22 @@ class PharmacyConsumer(AsyncWebsocketConsumer):
         # Send connection confirmation
         await self.send(text_data=json.dumps({
             'type': 'connection',
-            'message': f'Connected to pharmacy {self.pharmacy_id} channel'
+            'message': 'Connected to pharmacy channel',
+            'pharmacy_id': self.pharmacy_id,
+            'pharmacy_name': user.name,
+            'location': {
+                'lat': pharmacy.lat,
+                'lng': pharmacy.lng
+            }
         }))
+    
+    @database_sync_to_async
+    def get_pharmacy(self, user):
+        """Get pharmacy object from user"""
+        try:
+            return Pharmacy.objects.get(user=user)
+        except Pharmacy.DoesNotExist:
+            return None
     
     async def disconnect(self, close_code):
         # Leave pharmacy's room
@@ -100,42 +153,17 @@ class PharmacyConsumer(AsyncWebsocketConsumer):
     
     async def receive(self, text_data):
         """
-        Handle incoming messages from pharmacy (accept/reject)
+        Handle incoming messages from pharmacy
+        Pharmacies can acknowledge receipt or ask for clarification
+        Actual accept/reject is done via REST API for better reliability
         """
         data = json.loads(text_data)
         message_type = data.get('type')
         
-        if message_type == 'response':
-            # Pharmacy responding to a request
-            request_id = data.get('request_id')
-            status = data.get('status')  # ACCEPTED or REJECTED
-            message = data.get('message', '')
-            
-            # Update request status in database
-            await self.update_request_status(request_id, status)
-            
-            # Get request details
-            request_data = await self.get_request_details(request_id)
-            
-            # Send response to user via their WebSocket
-            await self.channel_layer.group_send(
-                f"user_{request_data['patient_id']}",
-                {
-                    'type': 'pharmacy_response',
-                    'request_id': request_id,
-                    'status': status,
-                    'message': message,
-                    'audio_url': data.get('audio_url'),
-                    'pharmacy_name': request_data['pharmacy_name'],
-                    'timestamp': request_data['timestamp']
-                }
-            )
-            
-            # Confirm to pharmacy
+        if message_type == 'ping':
             await self.send(text_data=json.dumps({
-                'type': 'response_sent',
-                'request_id': request_id,
-                'status': 'success'
+                'type': 'pong',
+                'message': 'Connection alive'
             }))
     
     async def new_request(self, event):
@@ -147,9 +175,21 @@ class PharmacyConsumer(AsyncWebsocketConsumer):
             'request_id': event['request_id'],
             'patient_name': event['patient_name'],
             'patient_phone': event['patient_phone'],
+            'patient_location': event['patient_location'],
+            'distance_km': event['distance_km'],
             'quantity': event['quantity'],
             'image_url': event['image_url'],
             'timestamp': event['timestamp']
+        }))
+    
+    async def request_taken(self, event):
+        """
+        Notify pharmacy that request was accepted by another pharmacy
+        """
+        await self.send(text_data=json.dumps({
+            'type': 'request_taken',
+            'request_id': event['request_id'],
+            'message': event['message']
         }))
     
     @database_sync_to_async
