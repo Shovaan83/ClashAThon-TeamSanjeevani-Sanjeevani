@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'celery',
     'django_celery_results',
     'pharmacy',
+    'medicine',
 ]
 
 MIDDLEWARE = [
