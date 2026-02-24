@@ -16,7 +16,7 @@ class CustomUser(AbstractUser):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
-    
+
 
 
 
@@ -25,6 +25,14 @@ class Pharmacy(models.Model):
     user = models.OneToOneField(CustomUser,on_delete=models.CASCADE)
     lat = models.FloatField()
     lng = models.FloatField()
+
+
+
+class PharmacyDocument(models.Model):
+    pharmacy = models.OneToOneField(Pharmacy,on_delete=models.CASCADE)
+    document = models.ImageField(upload_to="pharmacy-document/")
+    is_active = models.BooleanField(default=True)
+
 
 
 
