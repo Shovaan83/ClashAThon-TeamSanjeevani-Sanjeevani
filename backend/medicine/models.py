@@ -32,3 +32,19 @@ class MedicineRequest(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class PharmacyResponse(models.Model):
+    request = models.OneToOneField(
+        MedicineRequest,
+        on_delete=models.CASCADE,
+        related_name="response",
+    )
+
+    audio = models.FileField(
+        upload_to="pharmacy-audio/",
+        null=True,
+        blank=True,
+    )
+
+    text_message = models.TextField(blank=True)
+    responded_at = models.DateTimeField(auto_now_add=True)
