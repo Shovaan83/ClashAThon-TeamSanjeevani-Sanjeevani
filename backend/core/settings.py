@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import dotenv_values
 
+config = dotenv_values(".env") 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -143,8 +145,8 @@ EMAIL_USE_TLS = True
 
 EMAIL_PORT = 587
 
-EMAIL_HOST_USER = 'raghavdahal686@gmail.com'
+EMAIL_HOST_USER = config.get("EMAIL_HOST_USER")
 
-EMAIL_HOST_PASSWORD = 'lqqvuerjpcbnjvvo'
+EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD")
 
 CORS_ORIGIN_ALLOW_ALL = True
