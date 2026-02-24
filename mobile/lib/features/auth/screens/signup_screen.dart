@@ -6,9 +6,7 @@ import 'package:sanjeevani/shared/utils/controllers/signup_controller.dart';
 import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
 import 'package:sanjeevani/shared/widgets/app_text_field.dart';
-import 'package:sanjeevani/shared/widgets/or_divider.dart';
 import 'package:sanjeevani/shared/widgets/role_selector.dart';
-import 'package:sanjeevani/shared/widgets/social_button.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -50,9 +48,9 @@ class _SignupScreenState extends State<SignupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -233,22 +231,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   icon: Icons.arrow_forward,
                   isLoading: _isLoading,
                   onPressed: _handleSignup,
-                ),
-
-                const SizedBox(height: 24),
-
-                // ── Or divider ───────────────────────────────────────────
-                const OrDivider(),
-
-                const SizedBox(height: 16),
-
-                // ── Social buttons ───────────────────────────────────────
-                const Row(
-                  children: [
-                    SocialButton(text: 'Google', iconPath: '🇬'),
-                    SizedBox(width: 12),
-                    SocialButton(text: 'Apple', iconPath: '🍎'),
-                  ],
                 ),
 
                 const SizedBox(height: 24),

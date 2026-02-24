@@ -18,10 +18,7 @@ class SocialButton extends StatelessWidget {
     return Expanded(
       child: OutlinedButton.icon(
         onPressed: onPressed,
-        icon: Text(
-          iconPath,
-          style: const TextStyle(fontSize: 18),
-        ),
+        icon: Text(iconPath, style: const TextStyle(fontSize: 18)),
         label: Text(
           text,
           style: const TextStyle(

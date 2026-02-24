@@ -6,8 +6,6 @@ import 'package:sanjeevani/shared/utils/controllers/login_controller.dart';
 import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
 import 'package:sanjeevani/shared/widgets/app_text_field.dart';
-import 'package:sanjeevani/shared/widgets/or_divider.dart';
-import 'package:sanjeevani/shared/widgets/social_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -42,9 +40,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -164,22 +162,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 const SizedBox(height: 24),
-
-                // ── Or divider ───────────────────────────────────────────
-                const OrDivider(),
-
-                const SizedBox(height: 16),
-
-                // ── Social buttons ───────────────────────────────────────
-                const Row(
-                  children: [
-                    SocialButton(text: 'Google', iconPath: '🇬'),
-                    SizedBox(width: 12),
-                    SocialButton(text: 'Apple', iconPath: '🍎'),
-                  ],
-                ),
-
-                const SizedBox(height: 32),
 
                 // ── Don't have an account ────────────────────────────────
                 Center(

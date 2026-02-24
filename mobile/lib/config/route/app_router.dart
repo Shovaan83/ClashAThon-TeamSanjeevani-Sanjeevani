@@ -35,8 +35,9 @@ class AppRouter {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.of(context)
-                          .pushReplacementNamed(AppRoutes.loginScreen);
+                      Navigator.of(
+                        context,
+                      ).pushReplacementNamed(AppRoutes.loginScreen);
                     },
                     child: const Text('Go to Login'),
                   ),
