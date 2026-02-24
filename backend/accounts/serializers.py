@@ -45,7 +45,7 @@ class RegisterPharmacySerializer(serializers.ModelSerializer):
         model = Pharmacy
         fields = ["user", "lat", "lng", "pharmacy_document"]
 
-    # 🔹 Object level validation
+
     def validate(self, data):
         if not data.get("lat"):
             raise serializers.ValidationError("Latitude is required")
@@ -55,23 +55,23 @@ class RegisterPharmacySerializer(serializers.ModelSerializer):
 
         return data
 
-    # 🔹 Create pharmacy + document
+
     def create(self, validated_data):
         user_data = validated_data.pop("user")
         document_file = validated_data.pop("pharmacy_document")
 
-        # Create user
+
         user_serializer = RegisterUserSerializer(data=user_data)
         user_serializer.is_valid(raise_exception=True)
         user = user_serializer.save()
 
-        # Create pharmacy
+
         pharmacy = Pharmacy.objects.create(
             user=user,
             **validated_data
         )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
 
-        # Create pharmacy document
         PharmacyDocument.objects.create(
             pharmacy=pharmacy,
             document=document_file
