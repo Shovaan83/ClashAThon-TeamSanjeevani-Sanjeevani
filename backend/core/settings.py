@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import dotenv_values
 
+config = dotenv_values(".env") 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +27,7 @@ SECRET_KEY = 'django-insecure-+8u9#7ic@sl12#y1ts!gi^aa-*roa$af*r^a))!_-n4bz26wg$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -38,7 +40,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'core',
+    'drf_yasg',
+    'accounts',
+    'rest_framework_simplejwt',
+    'celery',
+    'pharmacy',
 ]
 
 MIDDLEWARE = [
@@ -117,3 +123,30 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
+
+REST_FRAMEWORK = {
+
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  
+
+EMAIL_HOST = 'smtp.gmail.com'  
+
+
+EMAIL_USE_TLS = True
+
+EMAIL_PORT = 587
+
+EMAIL_HOST_USER = config.get("EMAIL_HOST_USER")
+
+EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD")
+
+CORS_ORIGIN_ALLOW_ALL = True
