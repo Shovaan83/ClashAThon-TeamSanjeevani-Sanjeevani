@@ -10,7 +10,7 @@ import PharmacyProfile from "./features/home/pages/PharmacyProfile";
 import SearchPage from "./features/home/pages/SearchPage";
 import DevTools from "./components/DevTools";
 import { useAuthStore } from "./store/useAuthStore";
-import MedicineRequestHistory from "./pages/PharmacyProfile/MedicineRequestHistory";
+import MedicineRequestHistory from "./features/home/MedicineRequestHistory";
 
 
 function DashboardRedirect() {
