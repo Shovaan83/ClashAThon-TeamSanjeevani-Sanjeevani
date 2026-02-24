@@ -1,92 +1,118 @@
-import type { PatientProfileData, PharmacyProfileData } from '@/features/auth/schemas/registerSchema';
-import type { UserRole } from '@/store/useAuthStore';
+import axios, { type AxiosError } from 'axios';
+import type { PharmacyProfileData } from '@/features/auth/schemas/registerSchema';
 
-// Simulated network delay
-const delay = (ms = 800) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+// ─── Axios instance ───────────────────────────────────────────────────────────
+
+export const apiClient = axios.create({
+  baseURL: 'http://127.0.0.1:8000',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Attach stored JWT token on every request
+apiClient.interceptors.request.use((config) => {
+  try {
+    const stored = localStorage.getItem('sanjeevani-auth');
+    if (stored) {
+      const parsed = JSON.parse(stored) as { state?: { token?: string } };
+      const token = parsed?.state?.token;
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return config;
+});
+
+// ─── Error helper ─────────────────────────────────────────────────────────────
+
+/** Extracts a readable message from a Django backend error response or Axios error. */
+function extractError(err: unknown, fallback: string): string {
+  const axiosErr = err as AxiosError<{ error?: string; message?: string }>;
+  if (axiosErr.response?.data) {
+    const data = axiosErr.response.data;
+    return data.error ?? data.message ?? fallback;
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface SendOtpPayload {
-  email: string;
-  role: UserRole;
-}
-
-export interface VerifyOtpPayload {
-  email: string;
-  otp: string;
-}
-
-export interface RegisterPatientPayload extends PatientProfileData {
-  email: string;
-  role: 'patient';
-}
-
-export interface RegisterPharmacyPayload extends PharmacyProfileData {
-  email: string;
-  role: 'pharmacy';
-}
-
-export interface AuthResponse {
-  token: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    role: UserRole;
-    isVerified: boolean;
+export interface RegisterPharmacyResponse {
+  message: string;
+  data: {
+    user: {
+      id: number;
+      email: string;
+      name: string;
+      phone_number: string;
+      role: string;
+    };
+    lat: number;
+    lng: number;
   };
 }
 
-// ─── Mock API ─────────────────────────────────────────────────────────────────
-// MOCK: Replace each function body with a real Axios call when the backend is ready.
-// The correct OTP for any email in mock mode is: 123456
+// ─── API methods ─────────────────────────────────────────────────────────────
 
 export const api = {
   /**
-   * Step 1 → sends OTP to the provided email.
-   * POST /auth/send-otp
+   * Step 1 – sends OTP to the provided email.
+   * POST /send-otp
    */
-  async sendOtp(payload: SendOtpPayload): Promise<void> {
-    await delay();
-    console.log('[MOCK] sendOtp →', payload);
-    // Real: await axios.post('/auth/send-otp', payload);
-  },
-
-  /**
-   * Step 2 → verifies OTP. Throws if invalid.
-   * POST /auth/verify-otp
-   */
-  async verifyOtp(payload: VerifyOtpPayload): Promise<void> {
-    await delay();
-    console.log('[MOCK] verifyOtp →', payload);
-    if (payload.otp !== '123456') {
-      throw new Error('Invalid OTP. Please try again.');
+  async sendOtp(email: string): Promise<void> {
+    try {
+      await apiClient.post('/send-otp', { email });
+    } catch (err) {
+      throw new Error(extractError(err, 'Failed to send OTP. Please try again.'));
     }
-    // Real: await axios.post('/auth/verify-otp', payload);
   },
 
   /**
-   * Step 3 → registers the user and returns auth token + user.
-   * POST /auth/register
+   * Step 2 – verifies OTP. Throws if invalid.
+   * POST /verify-otp
    */
-  async register(
-    payload: RegisterPatientPayload | RegisterPharmacyPayload
-  ): Promise<AuthResponse> {
-    await delay();
-    console.log('[MOCK] register →', payload);
-    const name =
-      payload.role === 'pharmacy'
-        ? (payload as RegisterPharmacyPayload).pharmacyName
-        : (payload as RegisterPatientPayload).name;
-    return {
-      token: 'mock-jwt-token-' + Math.random().toString(36).slice(2),
+  async verifyOtp(email: string, otp: string): Promise<void> {
+    try {
+      await apiClient.post('/verify-otp', { email, otp });
+    } catch (err) {
+      throw new Error(extractError(err, 'Invalid OTP. Please try again.'));
+    }
+  },
+
+  /**
+   * Step 3 – registers a pharmacy account.
+   * POST /register-pharmacy/
+   * Transforms the frontend form data into the nested backend shape.
+   */
+  async registerPharmacy(
+    email: string,
+    data: PharmacyProfileData
+  ): Promise<RegisterPharmacyResponse> {
+    // Strip all non-digit characters from phone to satisfy the backend's 10-digit rule
+    const phone_number = data.phone.replace(/\D/g, '');
+
+    const payload = {
       user: {
-        id: 'mock-' + Math.random().toString(36).slice(2),
-        name,
-        email: payload.email,
-        role: payload.role,
-        isVerified: true,
+        email,
+        password: data.password,
+        name: data.pharmacyName,
+        phone_number,
       },
+      lat: data.location.lat,
+      lng: data.location.lng,
     };
+
+    try {
+      const res = await apiClient.post<{ status: string; message: string; data: RegisterPharmacyResponse['data'] }>(
+        '/register-pharmacy/',
+        payload
+      );
+      return { message: res.data.message, data: res.data.data };
+    } catch (err) {
+      throw new Error(extractError(err, 'Registration failed. Please try again.'));
+    }
   },
 };

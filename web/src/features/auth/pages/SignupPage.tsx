@@ -53,7 +53,6 @@ export default function SignupPage() {
         {step === 2 && (
           <OtpStep
             email={email}
-            role={role}
             onBack={backToEmail}
             onVerified={confirmOtp}
           />

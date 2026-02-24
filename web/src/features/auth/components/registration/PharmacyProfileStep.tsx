@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Building2, Phone, Lock, Eye, EyeOff, ArrowRight, Loader2,
-  MapPin, Navigation,
+  MapPin, Navigation, CheckCircle2,
 } from 'lucide-react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
-import { useAuthStore } from '@/store/useAuthStore';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { cn } from '@/lib/utils';
 
@@ -62,7 +61,7 @@ export default function PharmacyProfileStep({ email }: PharmacyProfileStepProps)
   const [apiError, setApiError] = useState('');
   const [markerPos, setMarkerPos] = useState<LatLng>(DEFAULT_CENTER);
   const [mapCenter, setMapCenter] = useState<LatLng>(DEFAULT_CENTER);
-  const login = useAuthStore((s) => s.login);
+  const [registered, setRegistered] = useState(false);
   const { location, loading: geoLoading, error: geoError, requestLocation } = useGeolocation();
 
   const {
@@ -98,11 +97,30 @@ export default function PharmacyProfileStep({ email }: PharmacyProfileStepProps)
   async function submit(data: PharmacyProfileData) {
     setApiError('');
     try {
-      const res = await api.register({ ...data, email, role: 'pharmacy' });
-      login(res.token, res.user);
-    } catch {
-      setApiError('Registration failed. Please try again.');
+      await api.registerPharmacy(email, data);
+      setRegistered(true);
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     }
+  }
+
+  // Success state – pharmacy registered, awaiting admin approval
+  if (registered) {
+    return (
+      <div className="flex flex-col items-center gap-5 py-6 text-center">
+        <CheckCircle2 size={48} className="text-[#2D5A40]" />
+        <div>
+          <h3 className="text-lg font-semibold text-[#1C1917]">Registration Submitted!</h3>
+          <p className="mt-1.5 text-sm text-stone-500">
+            Your pharmacy account has been created and is pending admin approval.
+            You will receive an email once your account is activated.
+          </p>
+        </div>
+        <p className="text-xs text-stone-400 border border-stone-200 p-3">
+          Registered email: <span className="font-semibold text-[#1C1917]">{email}</span>
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -188,7 +206,7 @@ export default function PharmacyProfileStep({ email }: PharmacyProfileStepProps)
           <Input
             id="ph-phone"
             type="tel"
-            placeholder="+1 234 567 8900"
+            placeholder="10-digit number e.g. 9876543210"
             autoComplete="tel"
             className="pl-10"
             {...register('phone')}

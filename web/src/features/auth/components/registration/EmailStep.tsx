@@ -25,10 +25,12 @@ export default function EmailStep({ role, onRoleChange, onSubmit }: EmailStepPro
 
   async function submit({ email }: EmailStepData) {
     try {
-      await api.sendOtp({ email, role });
+      await api.sendOtp(email);
       onSubmit(email);
-    } catch {
-      setError('email', { message: 'Failed to send OTP. Please try again.' });
+    } catch (err) {
+      setError('email', {
+        message: err instanceof Error ? err.message : 'Failed to send OTP. Please try again.',
+      });
     }
   }
 

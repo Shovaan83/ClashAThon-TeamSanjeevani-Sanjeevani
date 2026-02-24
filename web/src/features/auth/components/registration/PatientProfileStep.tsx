@@ -6,18 +6,17 @@ import { patientProfileSchema, type PatientProfileData } from '@/features/auth/s
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { api } from '@/lib/api';
-import { useAuthStore } from '@/store/useAuthStore';
 
 interface PatientProfileStepProps {
   email: string;
 }
 
-export default function PatientProfileStep({ email }: PatientProfileStepProps) {
+export default function PatientProfileStep({ email: _email }: PatientProfileStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [apiError, setApiError] = useState('');
-  const login = useAuthStore((s) => s.login);
+  // Patient registration backend endpoint not yet available
+  const _login = useAuthStore((s) => s.login);
 
   const {
     register,
@@ -25,14 +24,9 @@ export default function PatientProfileStep({ email }: PatientProfileStepProps) {
     formState: { errors, isSubmitting },
   } = useForm<PatientProfileData>({ resolver: zodResolver(patientProfileSchema) });
 
-  async function submit(data: PatientProfileData) {
+  async function submit(_data: PatientProfileData) {
     setApiError('');
-    try {
-      const res = await api.register({ ...data, email, role: 'patient' });
-      login(res.token, res.user);
-    } catch {
-      setApiError('Registration failed. Please try again.');
-    }
+    setApiError('Patient registration is not yet available. Please check back soon.');
   }
 
   return (
