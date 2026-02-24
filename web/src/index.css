@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --color-primary: #2d5a40;
+  --color-accent: #ff6b35;
+  --color-background-light: #fafaf9;
+  --color-background-dark: #161c19;
+  --font-display: "Inter", sans-serif;
+  --font-body: "Hind", sans-serif;
+}
+
+body {
+  font-family: "Hind", sans-serif;
+  background-color: #fafaf9;
+  color: #1c1917;
+}
+
+.logo-font {
+  font-family: "Inter", sans-serif;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+@keyframes caret-blink {
+  0%, 70%, 100% { opacity: 1; }
+  20%, 50% { opacity: 0; }
+}
+.animate-caret-blink {
+  animation: caret-blink 1.25s ease-out infinite;
+}
