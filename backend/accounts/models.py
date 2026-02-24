@@ -37,3 +37,10 @@ class PharmacyDocument(models.Model):
 
 
 
+
+class Otp(models.Model):
+    otp = models.CharField(max_length=6)
+    email = models.EmailField(max_length=200,unique=True,blank=False,null=False)
+    is_verified = models.BooleanField(default=False)
+    
+    
