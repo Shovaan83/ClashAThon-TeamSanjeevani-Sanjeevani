@@ -6,6 +6,7 @@ import HomePage from "./features/home/pages/HomePage";
 import PatientDashboardPage from "./features/home/pages/PatientDashboardPage";
 import PharmacyDashboardPage from "./features/home/pages/PharmacyDashboardPage";
 import PharmacyProfile from "./pages/PharmacyProfile/PharmacyProfile";
+import MedicineRequestHistory from "./pages/PharmacyProfile/MedicineRequestHistory";
 import DevTools from "./components/DevTools";
 import { useAuthStore } from "./store/useAuthStore";
 
@@ -31,6 +32,7 @@ export default function App() {
 
         {/* Pharmacy Profile */}
         <Route path="/pharmacy/:id" element={<PharmacyProfile />} />
+        <Route path="/pharmacy/requests" element={<MedicineRequestHistory />} />
 
         {/* Role-specific dashboards */}
         <Route path="/dashboard/patient" element={<PatientDashboardPage />} />

@@ -73,16 +73,17 @@ export default function PharmacyProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [pharmacyData, setPharmacyData] = useState(mockPharmacyData);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // TODO: Fetch pharmacy data from API using the id
     // For now, using mock data
-    setIsLoading(true);
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setPharmacyData(mockPharmacyData);
       setIsLoading(false);
     }, 500);
+
+    return () => clearTimeout(timer);
   }, [id]);
 
   if (isLoading) {
