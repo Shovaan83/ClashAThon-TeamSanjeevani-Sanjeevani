@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import PharmacyHeader from "./components/PharmacyHeader";
-import PharmacyInfo from "./components/PharmacyInfo";
-import AvailableServices from "./components/AvailableServices";
-import OpeningHours from "./components/OpeningHours";
-import LocationMap from "./components/LocationMap";
-import RecentReviews from "./components/RecentReviews";
-import ContactInfo from "./components/ContactInfo";
+import PharmacyHeader from "../components/PharmacyHeader";
+import PharmacyInfo from "../components/PharmacyInfo";
+import AvailableServices from "../components/AvailableServices";
+import OpeningHours from "../components/OpeningHours";
+import LocationMap from "../components/LocationMap";
+import RecentReviews from "../components/RecentReviews";
+import ContactInfo from "../components/ContactInfo";
 import { Button } from "@/components/ui/button";
 
 // Mock data - replace with API call
