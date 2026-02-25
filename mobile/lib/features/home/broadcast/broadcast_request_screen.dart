@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:provider/provider.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
+import 'package:sanjeevani/core/providers/notification_provider.dart';
+import 'package:sanjeevani/features/home/broadcast/services/medicine_service.dart';
 import 'package:sanjeevani/features/home/broadcast/widgets/broadcast_map_widget.dart';
 import 'package:sanjeevani/features/home/broadcast/widgets/live_radar_badge.dart';
 import 'package:sanjeevani/features/home/broadcast/widgets/location_status_chip.dart';
@@ -32,8 +37,14 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
 
   bool _isBroadcasting = false;
 
+  /// Quantity controller for medicine count.
+  final TextEditingController _quantityController =
+      TextEditingController(text: '1');
+
   /// Placeholder — real count would come from the API.
   static const int _pharmacyCount = 12;
+
+  final MedicineService _medicineService = MedicineService();
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   @override
@@ -77,7 +88,7 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
   }
 
   // ── Actions ───────────────────────────────────────────────────────────────
-  void _handleBroadcast() {
+  Future<void> _handleBroadcast() async {
     if (_prescription == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please attach your prescription first.')),
@@ -91,20 +102,63 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
       return;
     }
 
+    final quantity = int.tryParse(_quantityController.text) ?? 1;
+    if (quantity < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Quantity must be at least 1.')),
+      );
+      return;
+    }
+
     setState(() => _isBroadcasting = true);
 
-    // TODO: Call ApiService to broadcast prescription
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      final result = await _medicineService.createRequest(
+        patientLat: _userLocation!.latitude,
+        patientLng: _userLocation!.longitude,
+        radiusKm: _radius,
+        quantity: quantity,
+        imageFile: File(_prescription!.path),
+      );
+
+      final pharmaciesNotified = result['pharmacies_notified'] ?? 0;
+      final message = result['message'] as String? ?? 'Broadcast sent!';
+
       if (mounted) {
-        setState(() => _isBroadcasting = false);
+        // Refresh notification provider requests
+        context.read<NotificationProvider>().fetchRequests();
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Broadcast sent! Waiting for pharmacy responses.'),
+          SnackBar(
+            content: Text(
+              pharmaciesNotified > 0
+                  ? '$message ($pharmaciesNotified pharmacies notified)'
+                  : message,
+            ),
             backgroundColor: AppColors.primary,
           ),
         );
+
+        // Reset form
+        setState(() {
+          _prescription = null;
+          _quantityController.text = '1';
+          _isBroadcasting = false;
+        });
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isBroadcasting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceAll('Exception: ', ''),
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -197,6 +251,11 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
                 ),
 
                 const SizedBox(height: 24),
+
+                // Quantity input
+                _QuantityField(controller: _quantityController),
+
+                const SizedBox(height: 20),
 
                 // Radius selector
                 RadiusSelectorWidget(
@@ -340,6 +399,66 @@ class _MapIconButton extends StatelessWidget {
         ),
         child: Icon(icon, size: 18, color: AppColors.primary),
       ),
+    );
+  }
+}
+
+class _QuantityField extends StatelessWidget {
+  final TextEditingController controller;
+
+  const _QuantityField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'MEDICINE QUANTITY',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 120,
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppColors.primary.withValues(alpha: 0.05),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+              hintText: '1',
+              hintStyle: const TextStyle(color: AppColors.textSecondary),
+            ),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

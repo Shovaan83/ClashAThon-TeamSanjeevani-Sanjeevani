@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/service/api_service.dart';
 import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model.dart';
+// ignore: unused_import kept for PharmacyResponseType enum
 import 'package:sanjeevani/features/home/broadcast/models/pharmacy_response_model.dart';
 
 /// Service layer for medicine-request broadcast operations.
@@ -20,16 +21,14 @@ class MedicineService {
 
   /// Creates a medicine request and broadcasts it to nearby pharmacies.
   ///
-  /// [patientId]   — logged-in customer's user ID.
   /// [patientLat]  — current latitude of the patient.
   /// [patientLng]  — current longitude of the patient.
   /// [radiusKm]    — search radius in kilometres (default 5).
   /// [quantity]    — number of medicines needed.
   /// [imageFile]   — prescription image to upload.
   ///
-  /// Returns the created [MedicineRequestModel].
-  Future<MedicineRequestModel> createRequest({
-    required int patientId,
+  /// Returns a map with `request_id`, `pharmacies_notified`, `message`.
+  Future<Map<String, dynamic>> createRequest({
     required double patientLat,
     required double patientLng,
     required double radiusKm,
@@ -44,7 +43,6 @@ class MedicineService {
     final raw = await _api.postMultipart(
       ApiEndpoints.medicineRequest,
       fields: {
-        'patient': patientId.toString(),
         'patient_lat': patientLat.toString(),
         'patient_lng': patientLng.toString(),
         'radius_km': radiusKm.toString(),
@@ -54,8 +52,7 @@ class MedicineService {
       requiresAuth: true,
     );
 
-    final data = (raw as Map<String, dynamic>)['data'] as Map<String, dynamic>;
-    return MedicineRequestModel.fromJson(data);
+    return raw as Map<String, dynamic>;
   }
 
   // ── Shared — list requests ────────────────────────────────────────────────
@@ -84,8 +81,8 @@ class MedicineService {
   /// [responseType] — `PharmacyResponseType.accepted` or `.rejected`.
   /// [textMessage]  — optional text message for the patient.
   ///
-  /// Returns the created [PharmacyResponseModel].
-  Future<PharmacyResponseModel> respondToRequest({
+  /// Returns a map with `response_id`, `response_type`, `request_status`.
+  Future<Map<String, dynamic>> respondToRequest({
     required int requestId,
     required PharmacyResponseType responseType,
     String textMessage = '',
@@ -99,7 +96,6 @@ class MedicineService {
       },
       requiresAuth: true,
     );
-    final data = (raw as Map<String, dynamic>)['data'] as Map<String, dynamic>;
-    return PharmacyResponseModel.fromJson(data);
+    return raw as Map<String, dynamic>;
   }
 }
