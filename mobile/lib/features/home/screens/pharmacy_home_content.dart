@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
 import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model.dart';
+import 'package:sanjeevani/shared/widgets/voice_recorder_sheet.dart';
 
 /// Home tab content for **Pharmacy** users.
 ///
@@ -204,7 +207,23 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
   void _handleAccept(BuildContext context, MedicineRequestModel request) async {
     final provider = context.read<NotificationProvider>();
     final messenger = ScaffoldMessenger.of(context);
-    final ok = await provider.acceptRequest(request.id);
+
+    // Show option to attach a voice message
+    final audioFile = await showModalBottomSheet<File?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const VoiceRecorderSheet(),
+    );
+
+    // null means user dismissed/cancelled — still accept without audio
+    final ok = await provider.acceptRequest(
+      request.id,
+      audioFile: audioFile,
+    );
     if (mounted) {
       messenger.showSnackBar(
         SnackBar(

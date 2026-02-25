@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
+import 'package:sanjeevani/shared/utils/url_helper.dart';
 
 /// Notifications tab — shows real-time notifications from WebSocket events.
 ///
@@ -132,7 +134,7 @@ class NotificationScreen extends StatelessWidget {
 
 // ── Notification tile ────────────────────────────────────────────────────────
 
-class _NotificationTile extends StatelessWidget {
+class _NotificationTile extends StatefulWidget {
   final AppNotification notification;
   final VoidCallback onTap;
   final VoidCallback onDismiss;
@@ -144,11 +146,46 @@ class _NotificationTile extends StatelessWidget {
   });
 
   @override
+  State<_NotificationTile> createState() => _NotificationTileState();
+}
+
+class _NotificationTileState extends State<_NotificationTile> {
+  final AudioPlayer _player = AudioPlayer();
+  bool _isPlaying = false;
+
+  /// Resolved full URL for audio (if available).
+  String? get _audioUrl {
+    final raw = widget.notification.payload['audio_url'] as String?;
+    return UrlHelper.resolveMediaUrl(raw);
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleAudio() async {
+    if (_isPlaying) {
+      await _player.stop();
+      setState(() => _isPlaying = false);
+    } else {
+      final url = _audioUrl;
+      if (url == null) return;
+      _player.onPlayerComplete.listen((_) {
+        if (mounted) setState(() => _isPlaying = false);
+      });
+      await _player.play(UrlSource(url));
+      setState(() => _isPlaying = true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isUnread = !notification.isRead;
+    final isUnread = !widget.notification.isRead;
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -196,7 +233,7 @@ class _NotificationTile extends StatelessWidget {
                         ),
                       Expanded(
                         child: Text(
-                          notification.title,
+                          widget.notification.title,
                           style: TextStyle(
                             fontWeight: isUnread
                                 ? FontWeight.w700
@@ -206,7 +243,7 @@ class _NotificationTile extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        _relativeTime(notification.timestamp),
+                        _relativeTime(widget.notification.timestamp),
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -216,7 +253,7 @@ class _NotificationTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    notification.body,
+                    widget.notification.body,
                     style: TextStyle(
                       fontSize: 13,
                       color: isUnread
@@ -226,6 +263,47 @@ class _NotificationTile extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+
+                  // ── Audio play button (pharmacy_response with audio) ──
+                  if (_audioUrl != null) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: _toggleAudio,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isPlaying
+                                  ? Icons.stop_circle_outlined
+                                  : Icons.play_circle_outline,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _isPlaying
+                                  ? 'Stop Voice Message'
+                                  : 'Play Voice Message',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -236,11 +314,12 @@ class _NotificationTile extends StatelessWidget {
   }
 
   IconData get _icon {
-    switch (notification.type) {
+    switch (widget.notification.type) {
       case 'new_request':
         return Icons.medical_services_outlined;
       case 'pharmacy_response':
-        final accepted = notification.payload['response_type'] == 'ACCEPTED';
+        final accepted =
+            widget.notification.payload['response_type'] == 'ACCEPTED';
         return accepted ? Icons.check_circle_outline : Icons.cancel_outlined;
       case 'request_taken':
         return Icons.info_outline;
@@ -250,11 +329,12 @@ class _NotificationTile extends StatelessWidget {
   }
 
   Color get _iconColor {
-    switch (notification.type) {
+    switch (widget.notification.type) {
       case 'new_request':
         return AppColors.accent;
       case 'pharmacy_response':
-        final accepted = notification.payload['response_type'] == 'ACCEPTED';
+        final accepted =
+            widget.notification.payload['response_type'] == 'ACCEPTED';
         return accepted ? AppColors.success : AppColors.error;
       case 'request_taken':
         return const Color(0xFF6366F1);

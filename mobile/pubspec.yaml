@@ -20,6 +20,8 @@ dependencies:
   web_socket_channel: ^3.0.3
   provider: ^6.1.5+1
   google_ml_kit: ^0.21.0
+  record: ^6.2.0
+  audioplayers: ^6.5.1
 
 dev_dependencies:
   flutter_test:

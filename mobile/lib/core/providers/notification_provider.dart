@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:sanjeevani/core/service/websocket_service.dart';
 import 'package:sanjeevani/config/storage/storage_service.dart';
@@ -207,13 +209,18 @@ class NotificationProvider extends ChangeNotifier {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  /// Pharmacy accepts a medicine request.
-  Future<bool> acceptRequest(int requestId, {String message = ''}) async {
+  /// Pharmacy accepts a medicine request, optionally with a voice message.
+  Future<bool> acceptRequest(
+    int requestId, {
+    String message = '',
+    File? audioFile,
+  }) async {
     try {
       await _medicineService.respondToRequest(
         requestId: requestId,
         responseType: PharmacyResponseType.accepted,
         textMessage: message,
+        audioFile: audioFile,
       );
       // Remove from pending list
       _requests.removeWhere((r) => r.id == requestId);

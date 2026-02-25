@@ -1,3 +1,5 @@
+import 'package:sanjeevani/shared/utils/url_helper.dart';
+
 /// Mirrors `medicine/models.py :: PharmacyResponse`.
 ///
 /// RESPONSE_CHOICES: ACCEPTED | REJECTED
@@ -54,7 +56,7 @@ class PharmacyResponseModel {
         responseType: PharmacyResponseType.fromString(
           json['response_type'] as String,
         ),
-        audioUrl: json['audio'] as String?,
+        audioUrl: UrlHelper.resolveMediaUrl(json['audio'] as String?),
         textMessage: (json['text_message'] as String?) ?? '',
         respondedAt: DateTime.parse(json['responded_at'] as String),
       );

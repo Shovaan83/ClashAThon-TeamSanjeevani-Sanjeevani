@@ -80,20 +80,32 @@ class MedicineService {
   /// [requestId]    — ID of the [MedicineRequestModel] to respond to.
   /// [responseType] — `PharmacyResponseType.accepted` or `.rejected`.
   /// [textMessage]  — optional text message for the patient.
+  /// [audioFile]    — optional recorded voice message (max 1m30s).
   ///
   /// Returns a map with `response_id`, `response_type`, `request_status`.
   Future<Map<String, dynamic>> respondToRequest({
     required int requestId,
     required PharmacyResponseType responseType,
     String textMessage = '',
+    File? audioFile,
   }) async {
-    final raw = await _api.post(
+    final fields = <String, String>{
+      'request_id': requestId.toString(),
+      'response_type': responseType.toBackend(),
+      'text_message': textMessage,
+    };
+
+    final files = <http.MultipartFile>[];
+    if (audioFile != null) {
+      files.add(
+        await http.MultipartFile.fromPath('audio', audioFile.path),
+      );
+    }
+
+    final raw = await _api.postMultipart(
       ApiEndpoints.medicineResponse,
-      body: {
-        'request_id': requestId,
-        'response_type': responseType.toBackend(),
-        'text_message': textMessage,
-      },
+      fields: fields,
+      files: files,
       requiresAuth: true,
     );
     return raw as Map<String, dynamic>;
