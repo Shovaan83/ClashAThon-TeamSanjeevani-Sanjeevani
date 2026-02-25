@@ -160,4 +160,23 @@ class ApiService {
         .timeout(const Duration(seconds: 30));
     return _parseResponse(response);
   }
+
+  // MULTIPART POST (for file uploads — e.g. prescription images)
+  Future<dynamic> postMultipart(
+    String endpoint, {
+    required Map<String, String> fields,
+    List<http.MultipartFile> files = const [],
+    bool requiresAuth = false,
+  }) async {
+    final request = http.MultipartRequest('POST', _buildUri(endpoint));
+    if (requiresAuth && _authToken != null) {
+      request.headers['Authorization'] = 'Bearer $_authToken';
+    }
+    request.fields.addAll(fields);
+    request.files.addAll(files);
+
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
+    final response = await http.Response.fromStream(streamed);
+    return _parseResponse(response);
+  }
 }

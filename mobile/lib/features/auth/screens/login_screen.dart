@@ -1,11 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:sanjeevani/config/exception/api_exception.dart';
-import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
-import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
-import 'package:sanjeevani/core/service/api_service.dart';
+import 'package:sanjeevani/features/auth/services/auth_service.dart';
 import 'package:sanjeevani/shared/utils/controllers/login_controller.dart';
 import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
@@ -21,6 +19,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _controller = LoginController();
+  final _authService = AuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -36,29 +35,14 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await ApiService().post(
-        ApiEndpoints.login,
-        body: {'email': _controller.email, 'password': _controller.password},
+      final authResponse = await _authService.login(
+        _controller.email,
+        _controller.password,
       );
 
-      // Backend returns { status, message, data: { user: {..., role}, tokens: { access, refresh } } }
-      final data = response['data'] as Map<String, dynamic>;
-      final user = data['user'] as Map<String, dynamic>;
-      final tokens = data['tokens'] as Map<String, dynamic>;
+      await _authService.persistSession(authResponse);
 
-      await ApiService().saveTokens(
-        access: tokens['access'] as String,
-        refresh: tokens['refresh'] as String,
-      );
-
-      // Persist user info for splash-screen role routing
-      final storage = StorageService();
-      await storage.saveUserRole(user['role'] as String);
-      await storage.saveUserName(user['name'] as String);
-      await storage.saveUserEmail(user['email'] as String);
-
-      // Route to the correct home screen based on role
-      final role = UserRoleX.fromBackend(user['role'] as String);
+      final role = UserRoleX.fromBackend(authResponse.user.role);
 
       if (mounted) {
         Navigator.pushReplacementNamed(

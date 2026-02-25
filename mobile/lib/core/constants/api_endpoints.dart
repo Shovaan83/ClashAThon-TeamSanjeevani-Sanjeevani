@@ -1,17 +1,46 @@
+/// Centralised map of every backend API path.
+///
+/// URL structure (from core/urls.py):
+///   accounts  → root
+///   customer  → customer/
+///   pharmacy  → root (DRF router: register-pharmacy/)
+///   medicine  → medicine/
 class ApiEndpoints {
-  // Auth endpoints
-  static const String login = "login";
+  ApiEndpoints._();
 
-  // OTP endpoints
-  static const String sendOtp = "send-otp";
-  static const String verifyOtp = "verify-otp";
+  // ── Auth ────────────────────────────────────────────────
+  /// POST  /login  — unified login (all roles)
+  static const String login = 'login';
 
-  // Customer registration (POST /customer/register/)
-  static const String customerRegister = "customer/register/";
+  /// POST  /send-otp  — send OTP to email
+  static const String sendOtp = 'send-otp';
 
-  // Pharmacy registration (POST /register-pharmacy/)
-  static const String registerPharmacy = "register-pharmacy/";
+  /// POST  /verify-otp  — verify OTP code
+  static const String verifyOtp = 'verify-otp';
 
-  // Customer profile
-  static const String customerProfile = "customer/profile/";
+  // ── Customer ─────────────────────────────────────────────
+  /// POST  /customer/register/  — register new patient (after OTP)
+  static const String customerRegister = 'customer/register/';
+
+  /// GET / PUT  /customer/profile/  — get or update customer profile
+  static const String customerProfile = 'customer/profile/';
+
+  /// GET  /customer/requests/  — list customer's own medicine requests
+  static const String customerRequests = 'customer/requests/';
+
+  // ── Pharmacy ─────────────────────────────────────────────
+  /// POST  /register-pharmacy/  — register a new pharmacy
+  /// GET   /register-pharmacy/  — list all pharmacies
+  static const String pharmacyList = 'register-pharmacy/';
+
+  /// GET   /register-pharmacy/{id}/  — retrieve single pharmacy
+  static String pharmacyDetail(int id) => 'register-pharmacy/$id/';
+
+  // ── Medicine ─────────────────────────────────────────────
+  /// POST  /medicine/request/  — customer broadcasts medicine request
+  /// GET   /medicine/request/  — get requests (patient: own; pharmacy: nearby)
+  static const String medicineRequest = 'medicine/request/';
+
+  /// POST  /medicine/response/  — pharmacy responds accept/reject
+  static const String medicineResponse = 'medicine/response/';
 }

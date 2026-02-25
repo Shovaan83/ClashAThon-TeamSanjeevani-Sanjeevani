@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sanjeevani/config/exception/api_exception.dart';
-import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
-import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
-import 'package:sanjeevani/core/service/api_service.dart';
+import 'package:sanjeevani/features/auth/services/auth_service.dart';
 import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
 import 'package:sanjeevani/shared/widgets/app_text_field.dart';
@@ -28,6 +26,7 @@ class _SignupDetailsScreenState extends State<SignupDetailsScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _authService = AuthService();
 
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
@@ -81,22 +80,16 @@ class _SignupDetailsScreenState extends State<SignupDetailsScreen> {
 
     try {
       if (_role == UserRole.pharmacy) {
-        // Pharmacy registration with nested user object + location
-        await ApiService().post(
-          ApiEndpoints.registerPharmacy,
-          body: {
-            'user': {
-              'email': _email,
-              'password': _passwordController.text,
-              'name': _nameController.text.trim(),
-              'phone_number': _phoneController.text.trim(),
-            },
-            if (_hasLocation) 'lat': _latitude,
-            if (_hasLocation) 'lng': _longitude,
-          },
+        // Pharmacy registration — no tokens returned, redirect to login
+        await _authService.registerPharmacy(
+          email: _email,
+          name: _nameController.text.trim(),
+          phoneNumber: _phoneController.text.trim(),
+          password: _passwordController.text,
+          lat: _latitude!,
+          lng: _longitude!,
         );
 
-        // Pharmacy doesn't get auto-tokens — redirect to login
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
             context,
@@ -110,34 +103,18 @@ class _SignupDetailsScreenState extends State<SignupDetailsScreen> {
           );
         }
       } else {
-        // Patient registration via /customer/register/
-        final response = await ApiService().post(
-          ApiEndpoints.customerRegister,
-          body: {
-            'email': _email,
-            'password': _passwordController.text,
-            'confirm_password': _confirmPasswordController.text,
-            'name': _nameController.text.trim(),
-            'phone_number': _phoneController.text.trim(),
-          },
+        // Patient registration — returns tokens, auto-login
+        final authResponse = await _authService.registerCustomer(
+          email: _email,
+          name: _nameController.text.trim(),
+          phoneNumber: _phoneController.text.trim(),
+          password: _passwordController.text,
+          confirmPassword: _confirmPasswordController.text,
         );
 
-        // Backend returns tokens — auto-login
-        final data = response['data'] as Map<String, dynamic>;
-        final user = data['user'] as Map<String, dynamic>;
-        final tokens = data['tokens'] as Map<String, dynamic>;
+        await _authService.persistSession(authResponse);
 
-        await ApiService().saveTokens(
-          access: tokens['access'] as String,
-          refresh: tokens['refresh'] as String,
-        );
-
-        final storage = StorageService();
-        await storage.saveUserRole(user['role'] as String);
-        await storage.saveUserName(user['name'] as String);
-        await storage.saveUserEmail(user['email'] as String);
-
-        final role = UserRoleX.fromBackend(user['role'] as String);
+        final role = UserRoleX.fromBackend(authResponse.user.role);
 
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
