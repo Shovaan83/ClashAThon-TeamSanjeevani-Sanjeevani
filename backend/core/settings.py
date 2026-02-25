@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'customer',
     'accountsprofile',
     'DailyRemainder',
+    'rest_framework_simplejwt.token_blacklist'
 ]
 
 MIDDLEWARE = [
