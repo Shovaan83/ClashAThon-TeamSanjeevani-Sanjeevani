@@ -5,4 +5,5 @@ class AppRoutes {
   static const String otpVerification = '/signup/otp';
   static const String signupDetails = '/signup/details';
   static const String home = '/home';
+  static const String chatbot = '/chatbot';
 }
