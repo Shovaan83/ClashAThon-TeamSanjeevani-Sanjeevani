@@ -36,6 +36,15 @@ class ApiEndpoints {
   /// GET   /register-pharmacy/{id}/  — retrieve single pharmacy
   static String pharmacyDetail(int id) => 'register-pharmacy/$id/';
 
+  /// GET / POST / PUT / PATCH  /pharmacy/profile/
+  static const String pharmacyProfile = 'pharmacy/profile/';
+
+  /// POST  /pharmacy/document/upload/
+  static const String pharmacyDocumentUpload = 'pharmacy/document/upload/';
+
+  /// POST / DELETE  /pharmacy/profile-photo/upload/
+  static const String pharmacyProfilePhoto = 'pharmacy/profile-photo/upload/';
+
   // ── Medicine ─────────────────────────────────────────────
   /// POST  /medicine/request/  — customer broadcasts medicine request
   /// GET   /medicine/request/  — get requests (patient: own; pharmacy: nearby)

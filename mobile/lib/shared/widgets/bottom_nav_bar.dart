@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 
 /// Reusable bottom navigation bar used on the main shell screen.
-/// Holds 5 tabs: Home, Search, Add, Notifications, Profile.
+///
+/// **Patient** (default): 5 tabs – Home, Search, Add, Alerts, Profile
+/// **Pharmacy** (`isPharmacy: true`): 3 tabs – Home, Alerts, Profile
 class AppBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final int notificationBadge;
+  final bool isPharmacy;
 
   const AppBottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
     this.notificationBadge = 0,
+    this.isPharmacy = false,
   });
 
   @override
@@ -33,42 +37,75 @@ class AppBottomNavBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                label: 'Home',
-                isActive: currentIndex == 0,
-                onTap: () => onTap(0),
-              ),
-              _NavItem(
-                icon: Icons.search_outlined,
-                activeIcon: Icons.search,
-                label: 'Search',
-                isActive: currentIndex == 1,
-                onTap: () => onTap(1),
-              ),
-              _AddButton(isActive: currentIndex == 2, onTap: () => onTap(2)),
-              _NavItem(
-                icon: Icons.notifications_outlined,
-                activeIcon: Icons.notifications,
-                label: 'Alerts',
-                isActive: currentIndex == 3,
-                onTap: () => onTap(3),
-                badge: notificationBadge,
-              ),
-              _NavItem(
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
-                label: 'Profile',
-                isActive: currentIndex == 4,
-                onTap: () => onTap(4),
-              ),
-            ],
+            children: isPharmacy ? _pharmacyItems() : _patientItems(),
           ),
         ),
       ),
     );
+  }
+
+  /// Pharmacy: Home (0), Alerts (1), Profile (2)
+  List<Widget> _pharmacyItems() {
+    return [
+      _NavItem(
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home,
+        label: 'Home',
+        isActive: currentIndex == 0,
+        onTap: () => onTap(0),
+      ),
+      _NavItem(
+        icon: Icons.notifications_outlined,
+        activeIcon: Icons.notifications,
+        label: 'Alerts',
+        isActive: currentIndex == 1,
+        onTap: () => onTap(1),
+        badge: notificationBadge,
+      ),
+      _NavItem(
+        icon: Icons.person_outline,
+        activeIcon: Icons.person,
+        label: 'Profile',
+        isActive: currentIndex == 2,
+        onTap: () => onTap(2),
+      ),
+    ];
+  }
+
+  /// Patient: Home (0), Search (1), Add (2), Alerts (3), Profile (4)
+  List<Widget> _patientItems() {
+    return [
+      _NavItem(
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home,
+        label: 'Home',
+        isActive: currentIndex == 0,
+        onTap: () => onTap(0),
+      ),
+      _NavItem(
+        icon: Icons.search_outlined,
+        activeIcon: Icons.search,
+        label: 'Search',
+        isActive: currentIndex == 1,
+        onTap: () => onTap(1),
+      ),
+      _AddButton(isActive: currentIndex == 2, onTap: () => onTap(2)),
+      _NavItem(
+        icon: Icons.notifications_outlined,
+        activeIcon: Icons.notifications,
+        label: 'Alerts',
+        isActive: currentIndex == 3,
+        onTap: () => onTap(3),
+        badge: notificationBadge,
+      ),
+      _NavItem(
+        icon: Icons.person_outline,
+        activeIcon: Icons.person,
+        label: 'Profile',
+        isActive: currentIndex == 4,
+        onTap: () => onTap(4),
+      ),
+    ];
   }
 }
 

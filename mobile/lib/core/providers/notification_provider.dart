@@ -7,6 +7,14 @@ import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model
 import 'package:sanjeevani/features/home/broadcast/models/pharmacy_response_model.dart';
 import 'package:sanjeevani/features/home/broadcast/services/medicine_service.dart';
 
+/// Extracts a user-friendly message from any exception.
+String _friendlyError(Object e) {
+  final raw = e.toString();
+  // Strip leading "Exception: " or "ApiException: " etc.
+  final idx = raw.indexOf(': ');
+  return idx >= 0 ? raw.substring(idx + 2) : raw;
+}
+
 /// In-app notification item generated from WebSocket messages or API data.
 class AppNotification {
   final String id;
@@ -46,12 +54,15 @@ class NotificationProvider extends ChangeNotifier {
   final MedicineService _medicineService = MedicineService();
   final StorageService _storage = StorageService();
 
-  // ignore: unused_field — stored for future role-based logic
+  /// The user's role — used to tailor WebSocket behaviour.
   String? _role; // 'CUSTOMER' or 'PHARMACY'
   bool _isLoading = false;
   String? _error;
 
   // ── Public state ──────────────────────────────────────────────────────────
+
+  /// Whether the logged-in user is a pharmacy.
+  bool get isPharmacy => _role?.toUpperCase() == 'PHARMACY';
 
   /// Notifications list (newest first).
   final List<AppNotification> _notifications = [];
@@ -102,7 +113,7 @@ class NotificationProvider extends ChangeNotifier {
       _requests = await _medicineService.getRequests();
       _error = null;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception: ', '');
+      _error = _friendlyError(e);
     }
 
     _isLoading = false;
@@ -227,7 +238,7 @@ class NotificationProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception: ', '');
+      _error = _friendlyError(e);
       notifyListeners();
       return false;
     }
@@ -245,7 +256,7 @@ class NotificationProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception: ', '');
+      _error = _friendlyError(e);
       notifyListeners();
       return false;
     }

@@ -32,9 +32,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    _email = args['email'] as String;
-    _role = args['role'] as UserRole;
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _email = (args?['email'] as String?) ?? '';
+    _role = (args?['role'] as UserRole?) ?? UserRole.patient;
     _startResendTimer();
   }
 

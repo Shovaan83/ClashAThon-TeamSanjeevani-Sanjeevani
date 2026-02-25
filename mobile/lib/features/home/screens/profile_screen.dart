@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
 import 'package:sanjeevani/core/service/api_service.dart';
+import 'package:sanjeevani/features/home/services/customer_service.dart';
+import 'package:sanjeevani/features/home/services/pharmacy_profile_service.dart';
 
-/// Patient profile screen — matches the reference design with editable
-/// personal info, health records, saved pharmacies and security settings.
+/// Profile screen — loads real data from the backend.
+///
+/// Detects user role and uses [CustomerService] or [PharmacyProfileService]
+/// accordingly. Shows editable personal info, security/notification toggles
+/// and a logout button.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -13,49 +19,88 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // ── Form state ─────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Dev Patient');
-  final _emailController = TextEditingController(text: 'patient@dev.com');
-  final _phoneController = TextEditingController(text: '+977 984-723-4567');
-  String _bloodGroup = 'B+';
-  bool _isSaving = false;
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
 
-  // ── Security state ─────────────────────────────────────
+  bool _isSaving = false;
+  bool _isLoading = true;
+  String? _error;
+
+  // Determined dynamically from StorageService
+  bool _isPharmacy = false;
+  String _userRole = '';
+
+  // Pharmacy-specific fields
+  String _pharmacyAddress = '';
+
+  // Security state
   bool _pushNotifications = true;
   bool _twoFactor = false;
 
-  // ── Placeholder health records ─────────────────────────
-  static const _healthRecords = [
-    (
-      label: 'General Checkup.pdf',
-      date: 'Feb 21, 2026',
-      icon: Icons.picture_as_pdf,
-    ),
-    (
-      label: 'Pharmacy Receipt.jpg',
-      date: 'Feb 22, 2026',
-      icon: Icons.image_outlined,
-    ),
-    (label: 'Add New', date: '', icon: Icons.add),
-  ];
+  final _customerService = CustomerService();
+  final _pharmacyService = PharmacyProfileService();
 
-  // ── Placeholder pharmacies ─────────────────────────────
-  static const _savedPharmacies = [
-    (name: 'Everest Pharmacy', addr: 'Thamel, Kathmandu'),
-    (name: 'Himalayan Meds', addr: 'New Road, Pokhara'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
 
-  static const _bloodGroups = [
-    'A+',
-    'A-',
-    'B+',
-    'B-',
-    'O+',
-    'O-',
-    'AB+',
-    'AB-',
-  ];
+  Future<void> _loadProfile() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final role = await StorageService().getUserRole();
+      _userRole = role ?? '';
+      _isPharmacy = _userRole.toUpperCase() == 'PHARMACY';
+
+      if (_isPharmacy) {
+        final data = await _pharmacyService.getProfile();
+        if (mounted) {
+          setState(() {
+            _nameController.text = (data['name'] as String?) ?? '';
+            _emailController.text =
+                (data['user']?['email'] as String?) ??
+                (data['email'] as String?) ??
+                '';
+            _phoneController.text =
+                (data['phone_number'] as String?) ??
+                (data['user']?['phone_number'] as String?) ??
+                '';
+            _pharmacyAddress = (data['address'] as String?) ?? '';
+            _isLoading = false;
+          });
+        }
+      } else {
+        final user = await _customerService.getProfile();
+        if (mounted) {
+          setState(() {
+            _nameController.text = user.name;
+            _emailController.text = user.email;
+            _phoneController.text = user.phoneNumber;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      // Fall back to cached storage values
+      final name = await StorageService().getUserName();
+      final email = await StorageService().getUserEmail();
+      if (mounted) {
+        setState(() {
+          _nameController.text = name ?? '';
+          _emailController.text = email ?? '';
+          _isLoading = false;
+          _error = 'Could not load profile from server.\nShowing cached data.';
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -68,251 +113,247 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _saveChanges() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isSaving = true);
-    // TODO: Call ApiService to update profile on backend
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (mounted) {
-      setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully.'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
+
+    try {
+      if (_isPharmacy) {
+        await _pharmacyService.updateProfile(
+          name: _nameController.text.trim(),
+          phoneNumber: _phoneController.text.trim(),
+          address: _pharmacyAddress,
+        );
+      } else {
+        await _customerService.updateProfile(
+          name: _nameController.text.trim(),
+          phoneNumber: _phoneController.text.trim(),
+        );
+      }
+      // Persist name locally too
+      await StorageService().saveUserName(_nameController.text.trim());
+
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully.'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
   // ── Build ──────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Profile header ─────────────────────────────
-          _ProfileHeader(name: _nameController.text, onEditTap: () {}),
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
 
-          const SizedBox(height: 16),
-
-          // ── Stats row ──────────────────────────────────
-          const _StatsRow(),
-
-          const SizedBox(height: 16),
-
-          // ── Personal information ───────────────────────
-          _SectionCard(
-            icon: Icons.person_outline,
-            title: 'Personal Information',
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  Row(
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadProfile,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppColors.accent.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      Expanded(
-                        child: _FieldGroup(
-                          label: 'Full Name',
-                          child: TextFormField(
-                            controller: _nameController,
-                            style: _fieldStyle,
-                            decoration: _inputDeco('Full Name'),
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ),
+                      const Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: AppColors.accent,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
-                        child: _FieldGroup(
-                          label: 'Email Address',
-                          child: TextFormField(
-                            controller: _emailController,
-                            style: _fieldStyle,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: _inputDeco('Email address'),
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.accent,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _FieldGroup(
-                          label: 'Phone Number',
-                          child: TextFormField(
-                            controller: _phoneController,
-                            style: _fieldStyle,
-                            keyboardType: TextInputType.phone,
-                            decoration: _inputDeco('+977 XXXX-XXXXXX'),
+                ),
+              ),
+
+            // ── Profile header ─────────────────────────────
+            _ProfileHeader(
+              name: _nameController.text.isNotEmpty
+                  ? _nameController.text
+                  : (_isPharmacy ? 'Pharmacy' : 'Patient'),
+              roleLabel: _isPharmacy ? 'PHARMACY' : 'PATIENT',
+              onEditTap: () {},
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Personal information ───────────────────────
+            _SectionCard(
+              icon: Icons.person_outline,
+              title: 'Personal Information',
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _FieldGroup(
+                            label: 'Full Name',
+                            child: TextFormField(
+                              controller: _nameController,
+                              style: _fieldStyle,
+                              decoration: _inputDeco('Full Name'),
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? 'Name is required'
+                                  : null,
+                              onChanged: (_) => setState(() {}),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _FieldGroup(
-                          label: 'Blood Group',
-                          child: DropdownButtonFormField<String>(
-                            value: _bloodGroup,
-                            decoration: _inputDeco('Select'),
-                            style: _fieldStyle.copyWith(
-                              color: AppColors.textPrimary,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _FieldGroup(
+                            label: 'Email Address',
+                            child: TextFormField(
+                              controller: _emailController,
+                              style: _fieldStyle,
+                              readOnly: true, // email not editable
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: _inputDeco('Email address'),
                             ),
-                            items: _bloodGroups
-                                .map(
-                                  (g) => DropdownMenuItem(
-                                    value: g,
-                                    child: Text(g),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _FieldGroup(
+                      label: 'Phone Number',
+                      child: TextFormField(
+                        controller: _phoneController,
+                        style: _fieldStyle,
+                        keyboardType: TextInputType.phone,
+                        decoration: _inputDeco('+977 XXXX-XXXXXX'),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: SizedBox(
+                        height: 38,
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _saveChanges,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                          ),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
                                 )
-                                .toList(),
-                            onChanged: (v) {
-                              if (v != null) setState(() => _bloodGroup = v);
-                            },
-                          ),
+                              : const Text(
+                                  'Save Changes',
+                                  style: TextStyle(fontSize: 13),
+                                ),
                         ),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Security & notifications ───────────────────
+            _SectionCard(
+              icon: Icons.security_outlined,
+              title: 'Security & Notifications',
+              child: Column(
+                children: [
+                  _ToggleRow(
+                    label: 'Push Notifications',
+                    subtitle: 'Alerts for pickup and requests',
+                    value: _pushNotifications,
+                    onChanged: (v) => setState(() => _pushNotifications = v),
+                  ),
+                  const SizedBox(height: 8),
+                  _ToggleRow(
+                    label: '2FA Authentication',
+                    subtitle: 'Enhanced account protection',
+                    value: _twoFactor,
+                    onChanged: (v) => setState(() => _twoFactor = v),
                   ),
                   const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: SizedBox(
-                      height: 38,
-                      child: ElevatedButton(
-                        onPressed: _isSaving ? null : _saveChanges,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 40,
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        await ApiService().clearAuthToken();
+                        await StorageService().clearAll();
+                        if (context.mounted) {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            AppRoutes.loginScreen,
+                            (r) => false,
+                          );
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.error),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: _isSaving
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                'Save Changes',
-                                style: TextStyle(fontSize: 13),
-                              ),
+                      ),
+                      child: const Text(
+                        'Logout Session',
+                        style: TextStyle(color: AppColors.error, fontSize: 13),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Health records ─────────────────────────────
-          _SectionCard(
-            icon: Icons.folder_outlined,
-            title: 'Health Records',
-            trailing: TextButton.icon(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.upload_outlined,
-                size: 14,
-                color: AppColors.primary,
-              ),
-              label: const Text(
-                'Upload New',
-                style: TextStyle(fontSize: 12, color: AppColors.primary),
-              ),
-            ),
-            child: Row(
-              children: _healthRecords
-                  .map((r) => Expanded(child: _HealthRecordTile(record: r)))
-                  .toList(),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Saved pharmacies ───────────────────────────
-          _SectionCard(
-            icon: Icons.favorite_border,
-            title: 'Saved Pharmacies',
-            child: Column(
-              children: [
-                ..._savedPharmacies.map(
-                  (p) => _PharmacyRow(name: p.name, addr: p.addr),
-                ),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      'View all Pharmacies',
-                      style: TextStyle(fontSize: 12, color: AppColors.primary),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Security & notifications ───────────────────
-          _SectionCard(
-            icon: Icons.security_outlined,
-            title: 'Security & Notifications',
-            child: Column(
-              children: [
-                _ToggleRow(
-                  label: 'Push Notifications',
-                  subtitle: 'Alerts for pickup and requests',
-                  value: _pushNotifications,
-                  onChanged: (v) => setState(() => _pushNotifications = v),
-                ),
-                const SizedBox(height: 8),
-                _ToggleRow(
-                  label: '2FA Authentication',
-                  subtitle: 'Enhanced account protection',
-                  value: _twoFactor,
-                  onChanged: (v) => setState(() => _twoFactor = v),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 40,
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      await ApiService().clearAuthToken();
-                      if (context.mounted) {
-                        Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          AppRoutes.loginScreen,
-                          (r) => false,
-                        );
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.error),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Logout Session',
-                      style: TextStyle(color: AppColors.error, fontSize: 13),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -348,9 +389,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 class _ProfileHeader extends StatelessWidget {
   final String name;
+  final String roleLabel;
   final VoidCallback onEditTap;
 
-  const _ProfileHeader({required this.name, required this.onEditTap});
+  const _ProfileHeader({
+    required this.name,
+    required this.roleLabel,
+    required this.onEditTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -438,16 +484,16 @@ class _ProfileHeader extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 3),
-                const Row(
+                Row(
                   children: [
                     Icon(
-                      Icons.location_on_outlined,
+                      Icons.badge_outlined,
                       size: 12,
                       color: AppColors.textSecondary,
                     ),
                     SizedBox(width: 3),
                     Text(
-                      'Kathmandu, Nepal',
+                      roleLabel,
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -517,75 +563,15 @@ class _HeaderButton extends StatelessWidget {
   }
 }
 
-class _StatsRow extends StatelessWidget {
-  const _StatsRow();
-
-  @override
-  Widget build(BuildContext context) {
-    const stats = [
-      (
-        value: '24',
-        label: 'Medicine\nRequests',
-        icon: Icons.local_pharmacy_outlined,
-      ),
-      (value: '05', label: 'Active\nDrugs', icon: Icons.medication_outlined),
-      (value: '2', label: 'Saved\nPharmacies', icon: Icons.bookmark_border),
-    ];
-
-    return Row(
-      children: List.generate(stats.length, (i) {
-        final s = stats[i];
-        return Expanded(
-          child: Container(
-            margin: EdgeInsets.only(right: i < stats.length - 1 ? 8 : 0),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              children: [
-                Icon(s.icon, size: 18, color: AppColors.primary),
-                const SizedBox(height: 6),
-                Text(
-                  s.value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  s.label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textSecondary,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }),
-    );
-  }
-}
-
 class _SectionCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final Widget child;
-  final Widget? trailing;
 
   const _SectionCard({
     required this.icon,
     required this.title,
     required this.child,
-    this.trailing,
   });
 
   @override
@@ -612,7 +598,6 @@ class _SectionCard extends StatelessWidget {
                   color: AppColors.textPrimary,
                 ),
               ),
-              if (trailing != null) ...[const Spacer(), trailing!],
             ],
           ),
           const SizedBox(height: 14),
@@ -645,129 +630,6 @@ class _FieldGroup extends StatelessWidget {
         const SizedBox(height: 5),
         child,
       ],
-    );
-  }
-}
-
-class _HealthRecordTile extends StatelessWidget {
-  final ({String label, String date, IconData icon}) record;
-
-  const _HealthRecordTile({required this.record});
-
-  bool get _isAddButton => record.date.isEmpty;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: _isAddButton
-              ? AppColors.backgroundLight
-              : AppColors.primary.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: _isAddButton
-                ? AppColors.border
-                : AppColors.primary.withValues(alpha: 0.15),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              record.icon,
-              size: 24,
-              color: _isAddButton ? AppColors.textSecondary : AppColors.primary,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              record.label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: _isAddButton
-                    ? AppColors.textSecondary
-                    : AppColors.textPrimary,
-              ),
-            ),
-            if (record.date.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(
-                record.date,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PharmacyRow extends StatelessWidget {
-  final String name;
-  final String addr;
-
-  const _PharmacyRow({required this.name, required this.addr});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.local_pharmacy_outlined,
-              size: 18,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                Text(
-                  addr,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.favorite, size: 18, color: AppColors.accent),
-            onPressed: () {},
-            constraints: const BoxConstraints(),
-            padding: EdgeInsets.zero,
-          ),
-        ],
-      ),
     );
   }
 }

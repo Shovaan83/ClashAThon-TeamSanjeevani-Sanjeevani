@@ -36,7 +36,7 @@ class BroadcastMapWidget extends StatelessWidget {
         // ── Base tile layer ──────────────────────────────────
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.example.sanjeevani',
+          userAgentPackageName: 'com.sanjeevani.app',
         ),
 
         // ── Radius circle (filled + border) ─────────────────

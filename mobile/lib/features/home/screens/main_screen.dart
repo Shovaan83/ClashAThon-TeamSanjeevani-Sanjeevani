@@ -13,7 +13,10 @@ import 'package:sanjeevani/shared/widgets/bottom_nav_bar.dart';
 import 'package:sanjeevani/shared/widgets/role_selector.dart';
 
 /// The main shell after login. Holds the bottom navigation and swaps the
-/// body between the five tabs. The [role] decides which home content to show.
+/// body between the tabs. The [role] decides which home content to show.
+///
+/// **Patient** tabs: Home, Search, Broadcast, Notifications, Profile  (5 tabs)
+/// **Pharmacy** tabs: Home, Notifications, Profile                    (3 tabs)
 class MainScreen extends StatefulWidget {
   final UserRole role;
 
@@ -26,25 +29,29 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
+  bool get _isPharmacy => widget.role == UserRole.pharmacy;
+
   late final List<Widget> _tabs;
 
   @override
   void initState() {
     super.initState();
-    _tabs = [
-      // 0 – Home (different per role)
-      widget.role == UserRole.pharmacy
-          ? const PharmacyHomeContent()
-          : const PatientHomeContent(),
-      // 1 – Search
-      const SearchScreen(),
-      // 2 – Add
-      const AddScreen(),
-      // 3 – Notifications
-      const NotificationScreen(),
-      // 4 – Profile
-      const ProfileScreen(),
-    ];
+
+    if (_isPharmacy) {
+      _tabs = [
+        const PharmacyHomeContent(), // 0 – Home
+        const NotificationScreen(), // 1 – Notifications
+        const ProfileScreen(), // 2 – Profile
+      ];
+    } else {
+      _tabs = [
+        const PatientHomeContent(), // 0 – Home
+        const SearchScreen(), // 1 – Search
+        const AddScreen(), // 2 – Broadcast
+        const NotificationScreen(), // 3 – Notifications
+        const ProfileScreen(), // 4 – Profile
+      ];
+    }
 
     // Initialise the notification provider for customer role.
     // Pharmacy role init is handled inside PharmacyHomeContent.
@@ -99,6 +106,7 @@ class _MainScreenState extends State<MainScreen> {
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           notificationBadge: provider.unreadCount,
+          isPharmacy: _isPharmacy,
         ),
       ),
     );

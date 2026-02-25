@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
 import 'package:sanjeevani/shared/utils/url_helper.dart';
+import 'package:sanjeevani/shared/utils/time_utils.dart';
 import 'package:sanjeevani/shared/widgets/audio_player_sheet.dart';
 
 /// Notifications tab — shows real-time notifications from WebSocket events.
@@ -261,7 +262,7 @@ class _NotificationTileState extends State<_NotificationTile> {
                         ),
                       ),
                       Text(
-                        _relativeTime(widget.notification.timestamp),
+                        relativeTime(widget.notification.timestamp),
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -359,14 +360,6 @@ class _NotificationTileState extends State<_NotificationTile> {
       default:
         return AppColors.primary;
     }
-  }
-
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    return '${diff.inDays}d';
   }
 }
 

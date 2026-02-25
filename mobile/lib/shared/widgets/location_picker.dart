@@ -53,6 +53,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   void dispose() {
     _searchController.dispose();
     _debounce?.cancel();
+    _mapController.dispose();
     super.dispose();
   }
 
