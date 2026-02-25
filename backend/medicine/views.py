@@ -79,8 +79,17 @@ class MedicineRequestApiView(APIView):
                 status='PENDING'
             ).select_related('patient')
 
+            # Exclude requests this pharmacy has already responded to so they
+            # don't re-appear in the pending list after a reject.
+            already_responded_ids = set(
+                PharmacyResponse.objects.filter(pharmacy=pharmacy)
+                .values_list('request_id', flat=True)
+            )
+
             nearby_requests = []
             for req in all_pending:
+                if req.id in already_responded_ids:
+                    continue
                 distance = MedicineRequest.calculate_distance(
                     pharmacy.lat, pharmacy.lng,
                     req.patient_lat, req.patient_lng
@@ -131,13 +140,21 @@ class PharmacyResponseApiView(APIView):
     
     def post(self, request):
         """
-        Pharmacy responds to a medicine request (accept/reject) with optional audio
+        Pharmacy responds to a medicine request (accept/reject/substitute) with optional audio
         Notifies the customer in real-time
         """
         request_id = request.data.get('request_id')
-        response_type = request.data.get('response_type')  # ACCEPTED or REJECTED
+        response_type = request.data.get('response_type')  # ACCEPTED, REJECTED, or SUBSTITUTE
         text_message = request.data.get('text_message', '')
         audio_file = request.FILES.get('audio')
+        substitute_name = request.data.get('substitute_name', '')
+        substitute_price_raw = request.data.get('substitute_price')
+        substitute_price = None
+        if substitute_price_raw not in (None, ''):
+            try:
+                substitute_price = float(substitute_price_raw)
+            except (ValueError, TypeError):
+                substitute_price = None
         
         try:
             medicine_request = MedicineRequest.objects.select_related('patient').get(id=request_id)
@@ -168,11 +185,13 @@ class PharmacyResponseApiView(APIView):
                 pharmacy=pharmacy,
                 response_type=response_type,
                 text_message=text_message,
-                audio=audio_file
+                audio=audio_file,
+                substitute_name=substitute_name,
+                substitute_price=substitute_price,
             )
             
-            # If accepted, assign pharmacy and update status
-            if response_type == 'ACCEPTED':
+            # ACCEPTED and SUBSTITUTE both fulfil the request — assign pharmacy and mark taken
+            if response_type in ('ACCEPTED', 'SUBSTITUTE'):
                 medicine_request.pharmacy = pharmacy
                 medicine_request.status = 'ACCEPTED'
                 medicine_request.save()
@@ -213,12 +232,14 @@ class PharmacyResponseApiView(APIView):
                     },
                     'message': text_message,
                     'audio_url': audio_url,
+                    'substitute_name': substitute_name or None,
+                    'substitute_price': str(substitute_price) if substitute_price is not None else None,
                     'timestamp': pharmacy_response.responded_at.isoformat()
                 }
             )
             
             return Response({
-                'message': f'Response sent successfully',
+                'message': 'Response sent successfully',
                 'response_id': pharmacy_response.id,
                 'response_type': response_type,
                 'request_status': medicine_request.status

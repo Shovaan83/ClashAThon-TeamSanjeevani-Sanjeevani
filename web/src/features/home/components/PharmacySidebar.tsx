@@ -1,4 +1,6 @@
-import { CheckCircle, XCircle, Clock, ToggleRight } from 'lucide-react';
+import { CheckCircle, Clock, Mic, MicOff, Radio } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useRequestStore } from '@/store/useRequestStore';
 
 interface StatRowProps {
   label: string;
@@ -26,8 +28,14 @@ interface PharmacySidebarProps {
   wsConnected?: boolean;
 }
 
+// Detect support once so the toggle can be disabled if unavailable
+const isSpeechSupported =
+  typeof window !== 'undefined' &&
+  !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
 export default function PharmacySidebar({ stats, wsConnected }: PharmacySidebarProps) {
   const total = (stats?.accepted ?? 0) + (stats?.rejected ?? 0);
+  const { voiceMode, toggleVoiceMode } = useRequestStore();
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
@@ -48,7 +56,7 @@ export default function PharmacySidebar({ stats, wsConnected }: PharmacySidebarP
         <div className="space-y-3">
           <div className={`flex items-center justify-between p-3 border ${wsConnected ? 'border-[#2D5A40]/20 bg-[#2D5A40]/5' : 'border-[#FF6B35]/20 bg-[#FF6B35]/5'}`}>
             <div className="flex items-center gap-2">
-              <ToggleRight size={16} className={wsConnected ? 'text-[#2D5A40]' : 'text-[#FF6B35]'} />
+              <Radio size={16} className={wsConnected ? 'text-[#2D5A40]' : 'text-[#FF6B35]'} />
               <span className={`text-sm font-bold ${wsConnected ? 'text-[#2D5A40]' : 'text-[#FF6B35]'}`}>
                 {wsConnected ? 'Accepting Pings' : 'Reconnecting…'}
               </span>
@@ -67,9 +75,37 @@ export default function PharmacySidebar({ stats, wsConnected }: PharmacySidebarP
             <Clock size={14} className="text-stone-400" />
             Requests expire after 10 min
           </div>
-          <div className="flex items-center gap-3 text-sm text-stone-500">
-            <XCircle size={14} className="text-[#FF6B35]" />
-            Voice mode: off
+          {/* Voice mode toggle */}
+          <div
+            className={`flex items-center justify-between p-3 border transition-colors ${
+              voiceMode
+                ? 'border-[#2D5A40]/20 bg-[#2D5A40]/5'
+                : 'border-stone-200 bg-stone-50'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {voiceMode ? (
+                <Mic size={14} className="text-[#2D5A40]" />
+              ) : (
+                <MicOff size={14} className="text-stone-400" />
+              )}
+              <span
+                className={`text-sm font-bold ${voiceMode ? 'text-[#2D5A40]' : 'text-stone-400'}`}
+              >
+                {voiceMode ? 'Awaz: on' : 'Awaz: off'}
+              </span>
+            </div>
+            <div className="flex flex-col items-end gap-0.5">
+              <Switch
+                checked={voiceMode}
+                onCheckedChange={toggleVoiceMode}
+                disabled={!isSpeechSupported}
+                aria-label="Toggle Awaz voice mode"
+              />
+              {!isSpeechSupported && (
+                <span className="text-[10px] text-stone-400 leading-tight">Chrome/Edge only</span>
+              )}
+            </div>
           </div>
         </div>
       </div>

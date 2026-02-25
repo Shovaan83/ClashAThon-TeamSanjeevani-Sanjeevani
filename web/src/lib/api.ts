@@ -263,13 +263,15 @@ export const api = {
   },
 
   /**
-   * Pharmacy responds to a medicine request (accept/reject).
+   * Pharmacy responds to a medicine request (accept/reject/substitute).
    * POST /medicine/response/
    */
   async respondToMedicineRequest(data: {
     request_id: string | number;
-    response_type: 'ACCEPTED' | 'REJECTED';
+    response_type: 'ACCEPTED' | 'REJECTED' | 'SUBSTITUTE';
     text_message?: string;
+    substitute_name?: string;
+    substitute_price?: number;
   }) {
     try {
       const res = await apiClient.post('/medicine/response/', data);
