@@ -6,6 +6,8 @@ import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
 import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model.dart';
+import 'package:sanjeevani/features/home/screens/request_detail_screen.dart';
+import 'package:sanjeevani/shared/utils/time_utils.dart';
 import 'package:sanjeevani/shared/widgets/voice_recorder_sheet.dart';
 
 /// Home tab content for **Pharmacy** users.
@@ -192,6 +194,14 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
                             _handleAccept(context, pendingRequests[index]),
                         onReject: () =>
                             _handleReject(context, pendingRequests[index]),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RequestDetailScreen(
+                              request: pendingRequests[index],
+                            ),
+                          ),
+                        ),
                       ),
                       childCount: pendingRequests.length,
                     ),
@@ -425,219 +435,217 @@ class _MedicineRequestCard extends StatelessWidget {
   final MedicineRequestModel request;
   final VoidCallback onAccept;
   final VoidCallback onReject;
+  final VoidCallback? onTap;
 
   const _MedicineRequestCard({
     required this.request,
     required this.onAccept,
     required this.onReject,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // ── Top section ──────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Avatar
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: AppColors.accent,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              request.patientName ??
-                                  'Patient #${request.patientId}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              request.status.toBackend(),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.accent,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      // Info chips
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          _InfoChip(
-                            icon: Icons.medical_services_outlined,
-                            label: 'Qty: ${request.quantity}',
-                          ),
-                          _InfoChip(
-                            icon: Icons.radar,
-                            label: '${request.radiusKm.toStringAsFixed(1)} km',
-                          ),
-                          _InfoChip(
-                            icon: Icons.access_time,
-                            label: _timeAgo(request.createdAt),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-          ),
-
-          // ── Prescription image preview ────────────────
-          if (request.imageUrl.isNotEmpty)
+          ],
+        ),
+        child: Column(
+          children: [
+            // ── Top section ──────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  request.imageUrl,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 60,
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar
+                  Container(
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.border.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(10),
+                      color: AppColors.accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        color: AppColors.textSecondary,
+                    child: const Icon(
+                      Icons.person,
+                      color: AppColors.accent,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                request.patientName ??
+                                    'Patient #${request.patientId}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                request.status.toBackend(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.accent,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        // Info chips
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _InfoChip(
+                              icon: Icons.medical_services_outlined,
+                              label: 'Qty: ${request.quantity}',
+                            ),
+                            _InfoChip(
+                              icon: Icons.radar,
+                              label:
+                                  '${request.radiusKm.toStringAsFixed(1)} km',
+                            ),
+                            _InfoChip(
+                              icon: Icons.access_time,
+                              label: timeAgo(request.createdAt),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Prescription image preview ────────────────
+            if (request.imageUrl.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    request.imageUrl,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: AppColors.border.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-          // ── Location info ───────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.location_on_outlined,
-                  size: 14,
-                  color: AppColors.textSecondary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${request.patientLat.toStringAsFixed(4)}, ${request.patientLng.toStringAsFixed(4)}',
-                  style: const TextStyle(
-                    fontSize: 12,
+            // ── Location info ───────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.location_on_outlined,
+                    size: 14,
                     color: AppColors.textSecondary,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  Text(
+                    '${request.patientLat.toStringAsFixed(4)}, ${request.patientLng.toStringAsFixed(4)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // ── Action buttons ────────────────────────────
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onReject,
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Reject'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+            // ── Action buttons ────────────────────────────
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onReject,
+                      icon: const Icon(Icons.close, size: 16),
+                      label: const Text('Reject'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: onAccept,
-                    icon: const Icon(Icons.check, size: 16),
-                    label: const Text('Accept'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: onAccept,
+                      icon: const Icon(Icons.check, size: 16),
+                      label: const Text('Accept'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
-  }
-
-  String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
   }
 }
 

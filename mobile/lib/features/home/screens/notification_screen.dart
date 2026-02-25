@@ -4,6 +4,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
 import 'package:sanjeevani/shared/utils/url_helper.dart';
+import 'package:sanjeevani/shared/utils/time_utils.dart';
+import 'package:sanjeevani/shared/widgets/audio_player_sheet.dart';
 
 /// Notifications tab — shows real-time notifications from WebSocket events.
 ///
@@ -89,6 +91,19 @@ class NotificationScreen extends StatelessWidget {
                           notification: n,
                           onTap: () {
                             provider.markAsRead(n.id);
+                            // If it's a pharmacy_response with audio, open player
+                            final audioRaw = n.payload['audio_url'] as String?;
+                            final audioUrl = UrlHelper.resolveMediaUrl(
+                              audioRaw,
+                            );
+                            if (n.type == 'pharmacy_response' &&
+                                audioUrl != null) {
+                              AudioPlayerSheet.show(
+                                context,
+                                url: audioUrl,
+                                title: n.title,
+                              );
+                            }
                           },
                           onDismiss: () {
                             // Remove single notification
@@ -152,6 +167,7 @@ class _NotificationTile extends StatefulWidget {
 class _NotificationTileState extends State<_NotificationTile> {
   final AudioPlayer _player = AudioPlayer();
   bool _isPlaying = false;
+  bool _listenerRegistered = false;
 
   /// Resolved full URL for audio (if available).
   String? get _audioUrl {
@@ -172,9 +188,12 @@ class _NotificationTileState extends State<_NotificationTile> {
     } else {
       final url = _audioUrl;
       if (url == null) return;
-      _player.onPlayerComplete.listen((_) {
-        if (mounted) setState(() => _isPlaying = false);
-      });
+      if (!_listenerRegistered) {
+        _player.onPlayerComplete.listen((_) {
+          if (mounted) setState(() => _isPlaying = false);
+        });
+        _listenerRegistered = true;
+      }
       await _player.play(UrlSource(url));
       setState(() => _isPlaying = true);
     }
@@ -243,7 +262,7 @@ class _NotificationTileState extends State<_NotificationTile> {
                         ),
                       ),
                       Text(
-                        _relativeTime(widget.notification.timestamp),
+                        relativeTime(widget.notification.timestamp),
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -341,14 +360,6 @@ class _NotificationTileState extends State<_NotificationTile> {
       default:
         return AppColors.primary;
     }
-  }
-
-  String _relativeTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 60) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-    if (diff.inHours < 24) return '${diff.inHours}h';
-    return '${diff.inDays}d';
   }
 }
 

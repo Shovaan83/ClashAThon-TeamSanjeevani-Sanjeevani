@@ -5,8 +5,13 @@ import {
   ChevronRight,
   AlertTriangle,
   MessageSquare,
+  Mic,
+  MicOff,
+  Repeat,
 } from 'lucide-react';
 import { useRequestStore } from '@/store/useRequestStore';
+import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
+import VikalpaPanel from './VikalpaPanel';
 
 // ─── Slide-to-Accept ──────────────────────────────────────────────────────────
 const HANDLE_SIZE = 64; // px — handle is square, fits inside h-20 track with 8px top/bottom gap
@@ -155,8 +160,39 @@ function SlideToAccept({ onAccept }: { onAccept: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function IncomingRequestModal() {
-  const { activeRequest, isModalOpen, isResponding, acceptRequest, declineRequest, dismissModal } =
-    useRequestStore();
+  const {
+    activeRequest,
+    isModalOpen,
+    isResponding,
+    voiceMode,
+    isVikalpaOpen,
+    openVikalpa,
+    acceptRequest,
+    declineRequest,
+    dismissModal,
+  } = useRequestStore();
+
+  const [voiceFlash, setVoiceFlash] = useState<'CHA' | 'CHAINA' | null>(null);
+
+  const handleVoiceMatch = useCallback(
+    (command: 'CHA' | 'CHAINA') => {
+      setVoiceFlash(command);
+      setTimeout(() => {
+        if (command === 'CHA') {
+          acceptRequest();
+        } else {
+          declineRequest();
+        }
+        setVoiceFlash(null);
+      }, 600);
+    },
+    [acceptRequest, declineRequest],
+  );
+
+  const { isListening, transcript, error: voiceError, isSupported } = useVoiceRecognition({
+    enabled: isModalOpen && voiceMode,
+    onMatch: handleVoiceMatch,
+  });
 
   // Close on Escape key
   const handleKeyDown = useCallback(
@@ -169,7 +205,6 @@ export default function IncomingRequestModal() {
   useEffect(() => {
     if (isModalOpen) {
       document.addEventListener('keydown', handleKeyDown);
-      // Prevent body scroll while modal is open
       document.body.style.overflow = 'hidden';
     }
     return () => {
@@ -283,7 +318,7 @@ export default function IncomingRequestModal() {
             </div>
 
             {/* Action chips */}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               {isUrgent && (
                 <button
                   type="button"
@@ -302,6 +337,17 @@ export default function IncomingRequestModal() {
                 <MessageSquare size={16} />
                 <span className="font-bold text-sm uppercase tracking-wider">Message</span>
               </button>
+              {/* Vikalpa trigger */}
+              <button
+                type="button"
+                onClick={openVikalpa}
+                disabled={isVikalpaOpen}
+                className="flex items-center gap-2 px-5 py-2 border border-[#FF6B35]/30 bg-[#FF6B35]/5 text-[#FF6B35] hover:bg-[#FF6B35]/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Offer a substitute medicine"
+              >
+                <Repeat size={16} strokeWidth={2.5} />
+                <span className="font-bold text-sm uppercase tracking-wider">Vikalpa</span>
+              </button>
             </div>
 
             {/* Doctor's note */}
@@ -313,8 +359,80 @@ export default function IncomingRequestModal() {
           </div>
         </div>
 
+        {/* ── Vikalpa Panel — replaces footer when open ── */}
+        {isVikalpaOpen && <VikalpaPanel />}
+
         {/* ── Action footer ───────────────────────────── */}
-        <div className="bg-[#2D5A40]/5 border-t border-stone-200 px-10 py-8">
+        {!isVikalpaOpen && <div className="bg-[#2D5A40]/5 border-t border-stone-200 px-10 py-8">
+
+          {/* ── Voice Flash Overlay ─── shown for 600ms on command match */}
+          {voiceFlash && (
+            <div
+              className={`mb-4 flex items-center justify-center gap-3 p-4 border font-bold text-lg uppercase tracking-widest animate-pulse ${
+                voiceFlash === 'CHA'
+                  ? 'border-[#2D5A40]/30 bg-[#2D5A40]/10 text-[#2D5A40]'
+                  : 'border-[#FF6B35]/30 bg-[#FF6B35]/10 text-[#FF6B35]'
+              }`}
+            >
+              {voiceFlash === 'CHA' ? (
+                <>
+                  <Check size={20} strokeWidth={3} />
+                  CHA! — Accepting…
+                </>
+              ) : (
+                <>
+                  <X size={20} strokeWidth={3} />
+                  CHAINA! — Declining…
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Voice Listening Strip ─── shown when voice mode is on */}
+          {voiceMode && !voiceFlash && (
+            <div className="mb-4 border border-stone-200 bg-white">
+              {voiceError ? (
+                <div className="flex items-center gap-3 px-4 py-3 text-[#FF6B35]">
+                  <MicOff size={16} className="shrink-0" />
+                  <p className="text-xs font-medium">{voiceError}</p>
+                </div>
+              ) : !isSupported ? (
+                <div className="flex items-center gap-3 px-4 py-3 text-stone-400">
+                  <MicOff size={16} className="shrink-0" />
+                  <p className="text-xs font-medium">Voice not supported in this browser. Use Chrome or Edge.</p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  {/* Pulsing mic icon */}
+                  <div className={`relative flex shrink-0 ${isListening ? 'text-[#2D5A40]' : 'text-stone-300'}`}>
+                    {isListening && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="animate-ping absolute h-6 w-6 rounded-full bg-[#2D5A40] opacity-20" />
+                      </span>
+                    )}
+                    <Mic size={16} className="relative" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {isListening ? (
+                      <p className="text-xs font-bold text-[#2D5A40] uppercase tracking-wider">
+                        Listening… say{' '}
+                        <span className="text-[#2D5A40]">"CHA!"</span> to accept or{' '}
+                        <span className="text-[#FF6B35]">"CHAINA!"</span> to decline
+                      </p>
+                    ) : (
+                      <p className="text-xs text-stone-400 font-medium">Initializing microphone…</p>
+                    )}
+                    {transcript && (
+                      <p className="text-xs text-stone-400 mt-0.5 truncate">
+                        Heard: &ldquo;{transcript}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Slide-to-accept */}
           <SlideToAccept onAccept={acceptRequest} />
 
@@ -331,7 +449,7 @@ export default function IncomingRequestModal() {
               {isResponding ? 'Sending…' : 'Decline and Notify Doctor'}
             </button>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

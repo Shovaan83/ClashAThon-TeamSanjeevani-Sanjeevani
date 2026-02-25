@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
@@ -47,11 +51,29 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
 
   final MedicineService _medicineService = MedicineService();
 
+  // ── Map search state ──────────────────────────────────────────────────────
+  final MapController _mapController = MapController();
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  Timer? _searchDebounce;
+  List<_SearchResult> _searchResults = [];
+  bool _isSearching = false;
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     _fetchLocation();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _mapController.dispose();
+    _quantityController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchLocation() async {
@@ -81,11 +103,75 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
           _userLocation = LatLng(data.latitude!, data.longitude!);
           _isLoadingLocation = false;
         });
+        // Move map to GPS location
+        _mapController.move(_userLocation!, _mapController.camera.zoom);
       }
     } catch (e) {
       debugPrint('Location error: $e');
       if (mounted) setState(() => _isLoadingLocation = false);
     }
+  }
+
+  // ── Map search ────────────────────────────────────────────────────────────
+  void _onSearchChanged(String query) {
+    _searchDebounce?.cancel();
+    if (query.trim().length < 3) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+    setState(() => _isSearching = true);
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      _searchPlace(query.trim());
+    });
+  }
+
+  Future<void> _searchPlace(String query) async {
+    try {
+      final uri = Uri.parse(
+        'https://nominatim.openstreetmap.org/search'
+        '?q=${Uri.encodeComponent(query)}&format=json&limit=5',
+      );
+      final response = await http.get(
+        uri,
+        headers: {'User-Agent': 'SanjeevaniApp/1.0'},
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        setState(() {
+          _searchResults = data
+              .map(
+                (e) => _SearchResult(
+                  displayName: e['display_name'] as String,
+                  lat: double.parse(e['lat'] as String),
+                  lon: double.parse(e['lon'] as String),
+                ),
+              )
+              .toList();
+          _isSearching = false;
+        });
+      } else {
+        setState(() => _isSearching = false);
+      }
+    } catch (e) {
+      debugPrint('Search error: $e');
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  void _selectSearchResult(_SearchResult result) {
+    final newLocation = LatLng(result.lat, result.lon);
+    setState(() {
+      _userLocation = newLocation;
+      _searchResults = [];
+      _isLoadingLocation = false;
+    });
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    _mapController.move(newLocation, 14.0);
   }
 
   // ── Actions ───────────────────────────────────────────────────────────────
@@ -169,8 +255,45 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
         SizedBox(
           height: 290,
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              BroadcastMapWidget(center: _userLocation, radiusKm: _radius),
+              BroadcastMapWidget(
+                center: _userLocation,
+                radiusKm: _radius,
+                mapController: _mapController,
+              ),
+
+              // ── Search field — top center ──────────────────
+              Positioned(
+                top: 10,
+                left: 12,
+                right: 56,
+                child: _MapSearchField(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  isSearching: _isSearching,
+                  onChanged: _onSearchChanged,
+                  onClear: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchResults = [];
+                      _isSearching = false;
+                    });
+                  },
+                ),
+              ),
+
+              // ── Search results dropdown ────────────────────
+              if (_searchResults.isNotEmpty)
+                Positioned(
+                  top: 52,
+                  left: 12,
+                  right: 56,
+                  child: _SearchResultsList(
+                    results: _searchResults,
+                    onSelect: _selectSearchResult,
+                  ),
+                ),
 
               // Pharmacy count badge — top right
               Positioned(
@@ -462,6 +585,155 @@ class _QuantityField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Map search widgets ────────────────────────────────────────────────────────
+
+class _SearchResult {
+  final String displayName;
+  final double lat;
+  final double lon;
+
+  const _SearchResult({
+    required this.displayName,
+    required this.lat,
+    required this.lon,
+  });
+}
+
+class _MapSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool isSearching;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  const _MapSearchField({
+    required this.controller,
+    required this.focusNode,
+    required this.isSearching,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 3,
+      borderRadius: BorderRadius.circular(10),
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
+        onChanged: onChanged,
+        style: const TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'Search location…',
+          hintStyle: const TextStyle(
+            fontSize: 13,
+            color: AppColors.textSecondary,
+          ),
+          prefixIcon: const Icon(Icons.search, size: 20),
+          suffixIcon: isSearching
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : controller.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: onClear,
+                )
+              : null,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchResultsList extends StatelessWidget {
+  final List<_SearchResult> results;
+  final ValueChanged<_SearchResult> onSelect;
+
+  const _SearchResultsList({required this.results, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 200),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: ListView.separated(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          itemCount: results.length,
+          separatorBuilder: (_, __) =>
+              const Divider(height: 1, indent: 12, endIndent: 12),
+          itemBuilder: (context, index) {
+            final r = results[index];
+            return InkWell(
+              borderRadius: index == 0
+                  ? const BorderRadius.vertical(top: Radius.circular(10))
+                  : index == results.length - 1
+                  ? const BorderRadius.vertical(bottom: Radius.circular(10))
+                  : BorderRadius.zero,
+              onTap: () => onSelect(r),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        r.displayName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

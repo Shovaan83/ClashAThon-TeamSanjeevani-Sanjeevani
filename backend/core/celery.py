@@ -11,7 +11,9 @@ app = Celery('core')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Load task modules from all registered Django apps.
-app.autodiscover_tasks()
+# Explicitly include DailyRemainder to guarantee its tasks.py is found
+# (the capitalised app name can trip up autodiscovery on some platforms).
+app.autodiscover_tasks(['DailyRemainder', 'utils'])
 
 
 @app.task(bind=True)
