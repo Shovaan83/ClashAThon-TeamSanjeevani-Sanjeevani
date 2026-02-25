@@ -42,10 +42,12 @@ export default function PatientProfilePage() {
   const [twoFA, setTwoFA] = useState(false);
   const [savedPharmacies, setSavedPharmacies] = useState(SAVED_PHARMACIES);
 
-  function handleLogout() {
-    logout();
-    navigate('/login');
-  }
+
+
+ async function handleLogout() {
+  await logout();
+  navigate('/login');
+}
 
   function removeSavedPharmacy(id: number) {
     setSavedPharmacies((prev) => prev.filter((p) => p.id !== id));

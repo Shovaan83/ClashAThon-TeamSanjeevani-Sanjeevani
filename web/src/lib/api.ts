@@ -306,4 +306,18 @@ export const api = {
       throw new Error(extractError(err, 'Failed to fetch request history.'));
     }
   },
+
+  async logoutUser(refreshToken: string): Promise<void> {
+  try {
+    await apiClient.post('/logout', {
+      refresh: refreshToken,
+    });
+  } catch (err) {
+    console.warn('Backend logout failed, clearing session anyway.');
+  }
+}
 };
+
+
+
+
