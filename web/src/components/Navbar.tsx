@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNotificationStore, type AppNotification } from '@/store/useNotificationStore';
-import { Volume2, X, CheckCircle2, XCircle, Repeat, Package } from 'lucide-react';
+import { Volume2, X, CheckCircle2, XCircle, Repeat, Package, Star } from 'lucide-react';
 
 const PATIENT_LINKS = [
   { label: 'Home',        href: '/home' },
@@ -66,6 +66,8 @@ function NotifIcon({ type }: { type: AppNotification['type'] }) {
       return <Package className={`${base} text-[#2D5A40]`} />;
     case 'request_taken':
       return <XCircle className={`${base} text-slate-400`} />;
+    case 'patient_selected_you':
+      return <Star className={`${base} text-yellow-500`} />;
   }
 }
 
@@ -76,6 +78,7 @@ function iconBg(type: AppNotification['type']): string {
     case 'pharmacy_substitute': return 'bg-orange-50';
     case 'new_request': return 'bg-emerald-50';
     case 'request_taken': return 'bg-slate-100';
+    case 'patient_selected_you': return 'bg-yellow-50';
   }
 }
 

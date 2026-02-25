@@ -282,6 +282,19 @@ export const api = {
   },
 
   /**
+   * Patient selects a specific pharmacy offer to fulfil their request.
+   * POST /medicine/select/
+   */
+  async selectPharmacy(responseId: number) {
+    try {
+      const res = await apiClient.post('/medicine/select/', { response_id: responseId });
+      return res.data;
+    } catch (err) {
+      throw new Error(extractError(err, 'Failed to select pharmacy. Please try again.'));
+    }
+  },
+
+  /**
    * Get medicine requests (role-aware: pharmacy sees nearby pending, customer sees own).
    * GET /medicine/request/
    */

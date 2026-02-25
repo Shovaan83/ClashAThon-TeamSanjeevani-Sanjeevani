@@ -189,29 +189,10 @@ class PharmacyResponseApiView(APIView):
                 substitute_name=substitute_name,
                 substitute_price=substitute_price,
             )
-            
-            # ACCEPTED and SUBSTITUTE both fulfil the request — assign pharmacy and mark taken
-            if response_type in ('ACCEPTED', 'SUBSTITUTE'):
-                medicine_request.pharmacy = pharmacy
-                medicine_request.status = 'ACCEPTED'
-                medicine_request.save()
-                
-                # Notify other pharmacies that request is taken
-                nearby_pharmacies = medicine_request.get_nearby_pharmacies()
-                channel_layer = get_channel_layer()
-                
-                for item in nearby_pharmacies:
-                    other_pharmacy = item['pharmacy']
-                    if other_pharmacy.id != pharmacy.id:
-                        async_to_sync(channel_layer.group_send)(
-                            f"pharmacy_{other_pharmacy.id}",
-                            {
-                                'type': 'request_taken',
-                                'request_id': request_id,
-                                'message': 'This request has been accepted by another pharmacy'
-                            }
-                        )
-            
+
+            # Request stays PENDING — the patient now picks which pharmacy to use.
+            # The status will only change to ACCEPTED via POST /medicine/select/.
+
             # Send real-time notification to patient
             channel_layer = get_channel_layer()
             audio_url = None
@@ -222,6 +203,7 @@ class PharmacyResponseApiView(APIView):
                 f"user_{medicine_request.patient.id}",
                 {
                     'type': 'pharmacy_response',
+                    'response_id': pharmacy_response.id,
                     'request_id': request_id,
                     'response_type': response_type,
                     'pharmacy_id': pharmacy.id,
@@ -253,3 +235,87 @@ class PharmacyResponseApiView(APIView):
             return Response({
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PatientSelectPharmacyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Patient selects one of the pharmacy offers for their active request.
+        Body: { response_id: int }
+
+        - Marks the MedicineRequest as ACCEPTED and assigns the chosen pharmacy.
+        - Sends a `pharmacy_selected` WebSocket event to the chosen pharmacy.
+        - Sends a `request_taken` WebSocket event to all other nearby pharmacies.
+        """
+        response_id = request.data.get('response_id')
+        if not response_id:
+            return Response({'error': 'response_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            pharmacy_response = PharmacyResponse.objects.select_related(
+                'request', 'request__patient', 'pharmacy', 'pharmacy__user'
+            ).get(id=response_id)
+        except PharmacyResponse.DoesNotExist:
+            return Response({'error': 'Pharmacy response not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        medicine_request = pharmacy_response.request
+
+        # Only the owning patient may select
+        if medicine_request.patient != request.user:
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Can only select while request is still open
+        if medicine_request.status != 'PENDING':
+            return Response(
+                {'error': 'This request has already been fulfilled'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Cannot select a pharmacy that declined
+        if pharmacy_response.response_type not in ('ACCEPTED', 'SUBSTITUTE'):
+            return Response(
+                {'error': 'Cannot select a pharmacy that declined the request'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        selected_pharmacy = pharmacy_response.pharmacy
+
+        # Finalise the request
+        medicine_request.status = 'ACCEPTED'
+        medicine_request.pharmacy = selected_pharmacy
+        medicine_request.save()
+
+        channel_layer = get_channel_layer()
+
+        # Tell the chosen pharmacy they were selected
+        async_to_sync(channel_layer.group_send)(
+            f"pharmacy_{selected_pharmacy.id}",
+            {
+                'type': 'pharmacy_selected',
+                'request_id': medicine_request.id,
+                'patient_name': request.user.name,
+                'message': f'{request.user.name} has chosen you for their medicine request. Please prepare the medicine!',
+            }
+        )
+
+        # Notify all other nearby pharmacies that the request is no longer available
+        nearby_pharmacies = medicine_request.get_nearby_pharmacies()
+        for item in nearby_pharmacies:
+            other_pharmacy = item['pharmacy']
+            if other_pharmacy.id != selected_pharmacy.id:
+                async_to_sync(channel_layer.group_send)(
+                    f"pharmacy_{other_pharmacy.id}",
+                    {
+                        'type': 'request_taken',
+                        'request_id': medicine_request.id,
+                        'message': 'This request has been accepted by another pharmacy',
+                    }
+                )
+
+        return Response({
+            'message': f'You have selected {selected_pharmacy.user.name}',
+            'pharmacy_name': selected_pharmacy.user.name,
+            'pharmacy_id': selected_pharmacy.id,
+        }, status=status.HTTP_200_OK)

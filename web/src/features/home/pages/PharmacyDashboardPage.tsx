@@ -27,8 +27,8 @@ export default function PharmacyDashboardPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [stats, setStats] = useState<PharmacyStats>({ accepted: 0, rejected: 0, pending: 0 });
 
-  const fetchExistingRequests = useCallback(async () => {
-    setFetchError(null);
+  const fetchExistingRequests = useCallback(async (silent = false) => {
+    if (!silent) setFetchError(null);
     try {
       const res = await api.getMedicineRequests();
 
@@ -43,7 +43,20 @@ export default function PharmacyDashboardPage() {
         quantity: r.quantity as number | undefined,
         timestamp: new Date(r.created_at as string).getTime(),
       }));
-      setPendingRequests(mapped);
+
+      // On silent polls, only add genuinely new requests (don't wipe the list,
+      // which would remove anything added by WebSocket between polls).
+      if (silent) {
+        const { pendingRequests: current, addPendingRequest } = useRequestStore.getState();
+        const currentIds = new Set(current.map((r) => r.id));
+        for (const req of mapped) {
+          if (!currentIds.has(req.id)) {
+            addPendingRequest(req);
+          }
+        }
+      } else {
+        setPendingRequests(mapped);
+      }
 
       const historyMapped: HistoryItem[] = (res.history ?? []).map((r: Record<string, unknown>) => ({
         id: String(r.id),
@@ -63,14 +76,24 @@ export default function PharmacyDashboardPage() {
         });
       }
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to load requests');
+      if (!silent) setFetchError(err instanceof Error ? err.message : 'Failed to load requests');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [setPendingRequests]);
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchExistingRequests();
+  }, [fetchExistingRequests]);
+
+  // Polling fallback: re-sync pending requests every 20 s in case a WebSocket
+  // notification was missed (e.g. connection dropped, or same-browser testing).
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetchExistingRequests(true);
+    }, 20_000);
+    return () => clearInterval(id);
   }, [fetchExistingRequests]);
 
   const { connected } = usePharmacyWebSocket();

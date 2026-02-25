@@ -5,7 +5,8 @@ export type NotificationType =
   | 'pharmacy_rejected'
   | 'pharmacy_substitute'
   | 'new_request'
-  | 'request_taken';
+  | 'request_taken'
+  | 'patient_selected_you';
 
 export interface AppNotification {
   id: string;

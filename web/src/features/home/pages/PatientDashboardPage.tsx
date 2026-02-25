@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import BroadcastPanel from '../components/BroadcastPanel';
 import RadarMapPanel, { type PharmacyMarker } from '../components/RadarMapPanel';
+import PharmacyOffersPanel from '../components/PharmacyOffersPanel';
 import DashboardNavbar from '../components/DashboardNavbar';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useCustomerWebSocket, type PharmacyResponseEvent } from '@/hooks/useWebSocket';
@@ -51,14 +52,19 @@ export default function PatientDashboardPage() {
           geoLoading={geoLoading}
           geoError={geoError}
         />
-        <RadarMapPanel
-          location={resolvedLocation}
-          radius={radius}
-          requestLocation={requestLocation}
-          geoLoading={geoLoading}
-          pharmacyMarkers={pharmacyMarkers}
-          responseCount={responseCount}
-        />
+        {/* Flex-col wrapper — makes RadarMapPanel's grow fill the height,
+            and gives PharmacyOffersPanel an absolute positioning context */}
+        <div className="relative flex-1 overflow-hidden flex flex-col">
+          <RadarMapPanel
+            location={resolvedLocation}
+            radius={radius}
+            requestLocation={requestLocation}
+            geoLoading={geoLoading}
+            pharmacyMarkers={pharmacyMarkers}
+            responseCount={responseCount}
+          />
+          <PharmacyOffersPanel />
+        </div>
       </main>
     </div>
   );
