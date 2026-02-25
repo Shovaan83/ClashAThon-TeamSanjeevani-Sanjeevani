@@ -65,11 +65,3 @@ class PharmacyViewSet(ResponseMixin, viewsets.ModelViewSet):
             message="Pharmacy list retrieved successfully",
             status_code=status.HTTP_200_OK
         )
-    
-
-
-
-
-
-
-    
