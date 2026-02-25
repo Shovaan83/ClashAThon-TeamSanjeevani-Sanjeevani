@@ -8,6 +8,7 @@ from .models import CustomUser
 # from .serializers import RegisterPharmacySerializer
 from utils.response import ResponseMixin
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 from django.contrib.auth import authenticate
 from utils.tokens import get_tokens_for_user
 from utils.tasks import send_email_task
@@ -37,6 +38,9 @@ def send_email_async(email, subject, body):
 
 
 class RegisterUserEmail(ResponseMixin, APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     def post(self, request):
         email = request.data.get('email')
         if not email:
@@ -83,8 +87,11 @@ class RegisterUserEmail(ResponseMixin, APIView):
     
     
 
-class VerifyOtpEmail(ResponseMixin,APIView):
-    def post(self,request):
+class VerifyOtpEmail(ResponseMixin, APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
         email = request.data.get("email")
         otp  = request.data.get("otp")
 
@@ -110,12 +117,15 @@ class VerifyOtpEmail(ResponseMixin,APIView):
 
 
 
-class LoginView(ResponseMixin,APIView):
+class LoginView(ResponseMixin, APIView):
     """
     Unified login for all user types (Customer, Pharmacy, Admin)
     Returns user data with role for frontend routing
     """
-    def post(self,request):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
         

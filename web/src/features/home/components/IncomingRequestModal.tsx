@@ -155,7 +155,7 @@ function SlideToAccept({ onAccept }: { onAccept: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function IncomingRequestModal() {
-  const { activeRequest, isModalOpen, acceptRequest, declineRequest, dismissModal } =
+  const { activeRequest, isModalOpen, isResponding, acceptRequest, declineRequest, dismissModal } =
     useRequestStore();
 
   // Close on Escape key
@@ -323,11 +323,12 @@ export default function IncomingRequestModal() {
             <button
               type="button"
               onClick={declineRequest}
-              className="flex items-center gap-2 text-stone-400 hover:text-[#FF6B35] transition-colors font-bold text-sm uppercase tracking-widest"
+              disabled={isResponding}
+              className="flex items-center gap-2 text-stone-400 hover:text-[#FF6B35] transition-colors font-bold text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Decline and notify doctor"
             >
               <X size={16} strokeWidth={2.5} />
-              Decline and Notify Doctor
+              {isResponding ? 'Sending…' : 'Decline and Notify Doctor'}
             </button>
           </div>
         </div>

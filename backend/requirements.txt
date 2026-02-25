@@ -2,6 +2,9 @@ amqp==5.3.1
 asgiref==3.11.1
 billiard==4.2.4
 celery==5.6.2
+channels==4.0.0
+channels-redis==4.1.0
+daphne==4.0.0
 click==8.3.1
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2

@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
-import { ShieldCheck, Pencil, Eraser, Radio, FileText, MapPin, Loader2, AlertCircle, X } from 'lucide-react';
+import { ShieldCheck, Pencil, Eraser, Radio, FileText, MapPin, Loader2, AlertCircle, X, CheckCircle2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { api } from '@/lib/api';
 import type { GeoLocation } from '@/hooks/useGeolocation';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -56,6 +57,7 @@ export default function BroadcastPanel({ radius, setRadius, location, geoLoading
   const [redactions, setRedactions] = useState<Rect[]>([]);
   const [liveRect, setLiveRect] = useState<Rect | null>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -173,6 +175,7 @@ export default function BroadcastPanel({ radius, setRadius, location, geoLoading
   async function handleBroadcast() {
     if (!file) return;
     setIsBroadcasting(true);
+    setBroadcastResult(null);
 
     try {
       let finalFile = file;
@@ -192,7 +195,6 @@ export default function BroadcastPanel({ radius, setRadius, location, geoLoading
 
         ctx.fillStyle = '#000000';
         for (const r of redactions) {
-          // Map from overlay (container) coords → natural image coords
           const nx = ((r.x - ox) / dw) * img.naturalWidth;
           const ny = ((r.y - oy) / dh) * img.naturalHeight;
           const nw = (r.w / dw) * img.naturalWidth;
@@ -208,11 +210,23 @@ export default function BroadcastPanel({ radius, setRadius, location, geoLoading
         );
       }
 
-      // TODO: POST finalFile + location + radius to backend
-      console.log('Broadcasting:', finalFile, location, radius);
+      const formData = new FormData();
+      formData.append('image', finalFile);
+      formData.append('patient_lat', String(location.lat));
+      formData.append('patient_lng', String(location.lng));
+      formData.append('radius_km', String(radius));
+      formData.append('quantity', '1');
 
-      // Simulate network delay for demo
-      await new Promise((r) => setTimeout(r, 1200));
+      const res = await api.createMedicineRequest(formData);
+      setBroadcastResult({
+        success: true,
+        message: res.message ?? `Request sent to ${res.pharmacies_notified ?? 0} nearby pharmacies`,
+      });
+    } catch (err) {
+      setBroadcastResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Broadcast failed.',
+      });
     } finally {
       setIsBroadcasting(false);
     }
@@ -478,11 +492,20 @@ export default function BroadcastPanel({ radius, setRadius, location, geoLoading
               <><Radio size={22} className="group-hover:rotate-45 transition-transform duration-300" /><span className="text-lg font-bold tracking-wide uppercase">Broadcast Request</span></>
             )}
           </button>
-          <p className="text-center text-xs text-slate-400 mt-3">
-            {redactions.length > 0
-              ? `${redactions.length} area${redactions.length > 1 ? 's' : ''} will be redacted before sending.`
-              : 'Your request will expire automatically in 30 minutes.'}
-          </p>
+          {broadcastResult ? (
+            <div className={`mt-3 flex items-center justify-center gap-2 text-sm ${
+              broadcastResult.success ? 'text-green-600' : 'text-[#FF6B35]'
+            }`}>
+              {broadcastResult.success ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+              {broadcastResult.message}
+            </div>
+          ) : (
+            <p className="text-center text-xs text-slate-400 mt-3">
+              {redactions.length > 0
+                ? `${redactions.length} area${redactions.length > 1 ? 's' : ''} will be redacted before sending.`
+                : 'Your request will expire automatically in 30 minutes.'}
+            </p>
+          )}
         </div>
 
       </div>

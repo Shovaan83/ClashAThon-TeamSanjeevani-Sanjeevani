@@ -1,104 +1,59 @@
 import { apiClient } from "@/lib/api";
 
 export interface PharmacyProfile {
-  id: string;
+  id: number;
   name: string;
-  location: string;
-  image: string;
-  isVerified: boolean;
-  isOpen: boolean;
-  rating: number;
-  reviewCount: number;
-  handshakes: number;
-  responseTime: string;
-  phone: string;
-  email: string;
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
   address: string;
-  nearbyLandmark: string;
-  services: Service[];
-  schedule: DaySchedule[];
-  reviews: Review[];
+  phone_number: string;
+  lat: number;
+  lng: number;
+  email: string;
+  user_name: string;
+  profile_photo_url: string | null;
+  document_url: string | null;
+  document_status: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface Service {
-  id: string;
-  name: string;
-  icon:
-    | "prescription"
-    | "vaccination"
-    | "bp-checkup"
-    | "home-delivery"
-    | "device-rentals"
-    | "consultation";
-}
-
-export interface DaySchedule {
-  day: string;
-  hours: string;
-  isClosed?: boolean;
-  isToday?: boolean;
-}
-
-export interface Review {
-  id: string;
-  authorName: string;
-  authorInitials: string;
-  rating: number;
-  comment: string;
-  timeAgo: string;
+export interface PharmacyListItem {
+  id: number;
+  user: {
+    id: number;
+    email: string;
+    name: string;
+    phone_number: string;
+    role: string;
+  };
+  lat: number;
+  lng: number;
 }
 
 /**
- * Fetch pharmacy profile by ID
+ * Fetch authenticated pharmacy's own profile.
+ * GET /pharmacy/profile/
  */
-export async function getPharmacyProfile(
-  pharmacyId: string,
+export async function getPharmacyProfile(): Promise<PharmacyProfile> {
+  const response = await apiClient.get("/pharmacy/profile/");
+  return response.data;
+}
+
+/**
+ * Update authenticated pharmacy's profile.
+ * PUT /pharmacy/profile/
+ */
+export async function updatePharmacyProfile(
+  data: Partial<Pick<PharmacyProfile, "name" | "address" | "phone_number" | "lat" | "lng">>,
 ): Promise<PharmacyProfile> {
-  const response = await apiClient.get(`/api/pharmacies/${pharmacyId}/`);
+  const response = await apiClient.put("/pharmacy/profile/", data);
   return response.data;
 }
 
 /**
- * Fetch all pharmacies (with optional filters)
+ * Fetch all registered pharmacies.
+ * GET /register-pharmacy/
  */
-export async function getAllPharmacies(params?: {
-  search?: string;
-  location?: string;
-  isOpen?: boolean;
-}): Promise<PharmacyProfile[]> {
-  const response = await apiClient.get("/api/pharmacies/", { params });
-  return response.data;
-}
-
-/**
- * Add a review for a pharmacy
- */
-export async function addPharmacyReview(
-  pharmacyId: string,
-  data: {
-    rating: number;
-    comment: string;
-  },
-): Promise<Review> {
-  const response = await apiClient.post(
-    `/api/pharmacies/${pharmacyId}/reviews/`,
-    data,
-  );
-  return response.data;
-}
-
-/**
- * Get pharmacy reviews
- */
-export async function getPharmacyReviews(
-  pharmacyId: string,
-): Promise<Review[]> {
-  const response = await apiClient.get(
-    `/api/pharmacies/${pharmacyId}/reviews/`,
-  );
+export async function getAllPharmacies(): Promise<PharmacyListItem[]> {
+  const response = await apiClient.get("/register-pharmacy/");
   return response.data;
 }

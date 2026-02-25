@@ -25,14 +25,23 @@ function RecenterMap({ location }: { location: GeoLocation }) {
   return null;
 }
 
+export interface PharmacyMarker {
+  id: number;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 interface RadarMapPanelProps {
   location: GeoLocation;
   radius: number;          // km
   requestLocation: () => void;
   geoLoading: boolean;
+  pharmacyMarkers?: PharmacyMarker[];
+  responseCount?: number;
 }
 
-export default function RadarMapPanel({ location, radius, requestLocation, geoLoading }: RadarMapPanelProps) {
+export default function RadarMapPanel({ location, radius, requestLocation, geoLoading, pharmacyMarkers = [], responseCount }: RadarMapPanelProps) {
   return (
     <div className="grow relative overflow-hidden">
       {/* ── Leaflet map ────────────────────────────────────────── */}
@@ -50,6 +59,20 @@ export default function RadarMapPanel({ location, radius, requestLocation, geoLo
 
         {/* Patient location marker */}
         <Marker position={[location.lat, location.lng]} />
+
+        {/* Pharmacy response markers */}
+        {pharmacyMarkers.map((p) => (
+          <Marker
+            key={p.id}
+            position={[p.lat, p.lng]}
+            icon={L.divIcon({
+              className: '',
+              html: `<div style="background:#2D5A40;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,.3)">℞</div>`,
+              iconSize: [28, 28],
+              iconAnchor: [14, 14],
+            })}
+          />
+        ))}
 
         {/* Broadcast radius circle */}
         <Circle
@@ -72,7 +95,7 @@ export default function RadarMapPanel({ location, radius, requestLocation, geoLo
         <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-full bg-green-500" />
-            <span className="text-sm font-bold text-slate-700">12 Pharmacies</span>
+            <span className="text-sm font-bold text-slate-700">{pharmacyMarkers.length} Pharmacies</span>
           </div>
           <span className="h-4 w-px bg-slate-200" />
           <span className="text-xs text-slate-500 font-medium">Online Now</span>
@@ -99,7 +122,7 @@ export default function RadarMapPanel({ location, radius, requestLocation, geoLo
           <div className="w-px h-8 bg-slate-200" />
           <div className="text-center">
             <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Responses</p>
-            <p className="text-xl font-bold text-[#FF6B35] mt-0.5">0/3</p>
+            <p className="text-xl font-bold text-[#FF6B35] mt-0.5">{responseCount ?? 0}</p>
           </div>
         </div>
       </div>
