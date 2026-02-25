@@ -35,9 +35,9 @@ Verify the worker registers these tasks:
 celery -A core inspect registered
 ```
 Expected tasks:
-- `DailyRemainder.task.generate_daily_occurrences`
-- `DailyRemainder.task.check_missed_occurrences`
-- `DailyRemainder.task.send_reminder_notifications`
+- `DailyRemainder.tasks.generate_daily_occurrences`
+- `DailyRemainder.tasks.check_missed_occurrences`
+- `DailyRemainder.tasks.send_reminder_notifications`
 
 ---
 
@@ -128,7 +128,7 @@ Content-Type: application/json
 ### Step 5 — Manually generate today's occurrences
 ```bash
 python manage.py shell
->>> from DailyRemainder.task import generate_daily_occurrences
+>>> from DailyRemainder.tasks import generate_daily_occurrences
 >>> generate_daily_occurrences()
 ```
 Check the output — it should report at least 1 occurrence generated.
@@ -143,7 +143,7 @@ Confirm status is `scheduled` and `scheduled_at` is ~8 minutes from now.
 ### Step 7 — Manually trigger the notification task
 ```bash
 python manage.py shell
->>> from DailyRemainder.task import send_reminder_notifications
+>>> from DailyRemainder.tasks import send_reminder_notifications
 >>> send_reminder_notifications()
 ```
 Expected output: `Sent 1 notifications for 1 upcoming occurrences; deactivated 0 stale tokens`
