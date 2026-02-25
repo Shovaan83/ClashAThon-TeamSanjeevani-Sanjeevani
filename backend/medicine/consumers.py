@@ -170,6 +170,7 @@ class PharmacyConsumer(AsyncWebsocketConsumer):
         """
         Receive new medicine request notification
         """
+        print(f"PharmacyConsumer: Sending new_request to pharmacy {self.pharmacy_id}")
         await self.send(text_data=json.dumps({
             'type': 'new_request',
             'request_id': event['request_id'],

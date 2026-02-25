@@ -19,7 +19,7 @@ class MedicineRequestApiView(APIView):
         """
         serializer = MedicineRequestSerializer(data=request.data)
         if serializer.is_valid():
-            medicine_request = serializer.save()
+            medicine_request = serializer.save(patient=request.user)
             
             # Get all nearby pharmacies
             nearby_pharmacies = medicine_request.get_nearby_pharmacies()
@@ -32,17 +32,20 @@ class MedicineRequestApiView(APIView):
             
             # Broadcast to ALL nearby pharmacies via WebSocket
             channel_layer = get_channel_layer()
+            print(f"\n=== Broadcasting to {len(nearby_pharmacies)} pharmacies ===")
             for item in nearby_pharmacies:
                 pharmacy = item['pharmacy']
                 distance = item['distance']
+                
+                print(f"Sending to pharmacy_{pharmacy.id} (distance: {distance:.2f}km)")
                 
                 async_to_sync(channel_layer.group_send)(
                     f"pharmacy_{pharmacy.id}",
                     {
                         'type': 'new_request',
                         'request_id': medicine_request.id,
-                        'patient_name': medicine_request.patient.name,
-                        'patient_phone': medicine_request.patient.phone_number,
+                        'patient_name': request.user.name,
+                        'patient_phone': request.user.phone_number,
                         'patient_location': {
                             'lat': medicine_request.patient_lat,
                             'lng': medicine_request.patient_lng
@@ -53,6 +56,7 @@ class MedicineRequestApiView(APIView):
                         'timestamp': medicine_request.created_at.isoformat()
                     }
                 )
+            print("=== Broadcast complete ===\n")
             
             return Response({
                 'message': f'Medicine request sent to {len(nearby_pharmacies)} nearby pharmacies',
