@@ -15,17 +15,37 @@ from utils.email import send_email
 from utils.otp import generate_otp
 from rest_framework.response import Response
 from rest_framework import status
+import threading
+import logging
+
 
 from .models import Otp
 
-class RegisterUserEmail(ResponseMixin,APIView):
-    def post(self,request):
+logger = logging.getLogger(__name__)
+
+
+def send_email_async(email, subject, body):
+    """
+    Send email in a separate thread to avoid blocking the request.
+    This is a fallback when Celery is not running.
+    """
+    try:
+        send_email(email, subject, body)
+        logger.info(f"Email sent successfully to {email}")
+    except Exception as e:
+        logger.error(f"Failed to send email to {email}: {str(e)}")
+
+
+class RegisterUserEmail(ResponseMixin, APIView):
+    def post(self, request):
         email = request.data.get('email')
         if not email:
-            return self.validation_error_response(message="Please input email",errors="")
+            return self.validation_error_response(message="Please input email", errors="")
+        
         check_email = CustomUser.objects.filter(email=email).first()
         if check_email:
             return self.validation_error_response(message="Email already exist")
+        
         otp = generate_otp()
         
         # Update existing OTP or create new one
@@ -34,12 +54,30 @@ class RegisterUserEmail(ResponseMixin,APIView):
             defaults={'otp': otp, 'is_verified': False}
         )
 
-        # Send email directly (synchronous) - more reliable for development
+        email_body = f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes."
+        email_subject = "Your OTP"
+        
+        # Try Celery first (async), fallback to threaded email sending
+        celery_available = False
         try:
-            send_email(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
-            
-        except Exception as e:
-            return Response({'error': f'Failed to send OTP: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Check if Celery is available and broker is connected
+            result = send_email_task.delay(email, email_subject, email_body)
+            # Give it a moment to see if task was accepted
+            celery_available = True
+            logger.info(f"Email task queued via Celery for {email}")
+        except Exception as celery_exc:
+            logger.warning(f"Celery not available, falling back to threaded email: {str(celery_exc)}")
+            celery_available = False
+        
+        if not celery_available:
+            # Use threading to send email in background (non-blocking)
+            email_thread = threading.Thread(
+                target=send_email_async,
+                args=(email, email_subject, email_body)
+            )
+            email_thread.daemon = True
+            email_thread.start()
+            logger.info(f"Email thread started for {email}")
 
         return Response({'message': 'OTP sent successfully.'}, status=status.HTTP_200_OK)
     
