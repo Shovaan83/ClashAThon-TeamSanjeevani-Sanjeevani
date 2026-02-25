@@ -393,7 +393,7 @@ packages:
     source: hosted
     version: "0.13.1"
   google_mlkit_text_recognition:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: google_mlkit_text_recognition
       sha256: "10a8d1a64fa21efda89514f6df88bbb7885be3ae1bfb7a6d229132d802a20d22"

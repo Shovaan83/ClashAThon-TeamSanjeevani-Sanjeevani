@@ -220,10 +220,7 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
     );
 
     // null means user dismissed/cancelled — still accept without audio
-    final ok = await provider.acceptRequest(
-      request.id,
-      audioFile: audioFile,
-    );
+    final ok = await provider.acceptRequest(request.id, audioFile: audioFile);
     if (mounted) {
       messenger.showSnackBar(
         SnackBar(

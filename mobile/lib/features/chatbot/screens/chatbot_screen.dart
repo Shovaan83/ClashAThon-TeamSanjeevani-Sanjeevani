@@ -624,9 +624,7 @@ class _ChatInputBar extends StatelessWidget {
               onPressed: isLoading ? null : onPickImage,
               icon: Icon(
                 Icons.image_outlined,
-                color: isLoading
-                    ? AppColors.textSecondary
-                    : AppColors.primary,
+                color: isLoading ? AppColors.textSecondary : AppColors.primary,
               ),
               tooltip: 'Send prescription image',
               padding: const EdgeInsets.only(bottom: 4),

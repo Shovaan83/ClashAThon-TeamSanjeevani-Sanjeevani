@@ -97,9 +97,7 @@ class MedicineService {
 
     final files = <http.MultipartFile>[];
     if (audioFile != null) {
-      files.add(
-        await http.MultipartFile.fromPath('audio', audioFile.path),
-      );
+      files.add(await http.MultipartFile.fromPath('audio', audioFile.path));
     }
 
     final raw = await _api.postMultipart(

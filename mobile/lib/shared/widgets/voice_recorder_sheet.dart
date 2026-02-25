@@ -116,8 +116,7 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  double get _progress =>
-      _elapsed / _kMaxDuration.inSeconds;
+  double get _progress => _elapsed / _kMaxDuration.inSeconds;
 
   // ── Build ─────────────────────────────────────────────────────────
 
@@ -148,10 +147,7 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
             // Title
             const Text(
               'Record Voice Message',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             Text(
@@ -199,16 +195,13 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: _isRecording
-                        ? AppColors.error
-                        : AppColors.primary,
+                    color: _isRecording ? AppColors.error : AppColors.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: (_isRecording
-                                ? AppColors.error
-                                : AppColors.primary)
-                            .withValues(alpha: 0.3),
+                        color:
+                            (_isRecording ? AppColors.error : AppColors.primary)
+                                .withValues(alpha: 0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
