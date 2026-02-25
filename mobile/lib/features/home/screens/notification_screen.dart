@@ -29,18 +29,16 @@ class NotificationScreen extends StatelessWidget {
                     children: [
                       Text(
                         'Notifications',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${provider.unreadCount} unread',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: AppColors.textSecondary),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -59,8 +57,11 @@ class NotificationScreen extends StatelessWidget {
                         ),
                       if (notifications.isNotEmpty)
                         IconButton(
-                          icon: const Icon(Icons.delete_sweep_outlined,
-                              size: 22, color: AppColors.textSecondary),
+                          icon: const Icon(
+                            Icons.delete_sweep_outlined,
+                            size: 22,
+                            color: AppColors.textSecondary,
+                          ),
                           tooltip: 'Clear all',
                           onPressed: () => _confirmClear(context, provider),
                         ),
@@ -197,8 +198,9 @@ class _NotificationTile extends StatelessWidget {
                         child: Text(
                           notification.title,
                           style: TextStyle(
-                            fontWeight:
-                                isUnread ? FontWeight.w700 : FontWeight.w600,
+                            fontWeight: isUnread
+                                ? FontWeight.w700
+                                : FontWeight.w600,
                             fontSize: 14,
                           ),
                         ),
@@ -238,8 +240,7 @@ class _NotificationTile extends StatelessWidget {
       case 'new_request':
         return Icons.medical_services_outlined;
       case 'pharmacy_response':
-        final accepted =
-            notification.payload['response_type'] == 'ACCEPTED';
+        final accepted = notification.payload['response_type'] == 'ACCEPTED';
         return accepted ? Icons.check_circle_outline : Icons.cancel_outlined;
       case 'request_taken':
         return Icons.info_outline;
@@ -253,8 +254,7 @@ class _NotificationTile extends StatelessWidget {
       case 'new_request':
         return AppColors.accent;
       case 'pharmacy_response':
-        final accepted =
-            notification.payload['response_type'] == 'ACCEPTED';
+        final accepted = notification.payload['response_type'] == 'ACCEPTED';
         return accepted ? AppColors.success : AppColors.error;
       case 'request_taken':
         return const Color(0xFF6366F1);
@@ -283,8 +283,11 @@ class _EmptyNotifications extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_none,
-              size: 64, color: AppColors.border.withValues(alpha: 0.6)),
+          Icon(
+            Icons.notifications_none,
+            size: 64,
+            color: AppColors.border.withValues(alpha: 0.6),
+          ),
           const SizedBox(height: 12),
           const Text(
             'No Notifications',

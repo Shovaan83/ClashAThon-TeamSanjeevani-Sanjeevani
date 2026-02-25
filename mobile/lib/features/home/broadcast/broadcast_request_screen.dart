@@ -38,8 +38,9 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
   bool _isBroadcasting = false;
 
   /// Quantity controller for medicine count.
-  final TextEditingController _quantityController =
-      TextEditingController(text: '1');
+  final TextEditingController _quantityController = TextEditingController(
+    text: '1',
+  );
 
   /// Placeholder — real count would come from the API.
   static const int _pharmacyCount = 12;
@@ -151,9 +152,7 @@ class _BroadcastRequestScreenState extends State<BroadcastRequestScreen> {
         setState(() => _isBroadcasting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().replaceAll('Exception: ', ''),
-            ),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: AppColors.error,
           ),
         );
@@ -432,17 +431,21 @@ class _QuantityField extends StatelessWidget {
             decoration: InputDecoration(
               filled: true,
               fillColor: AppColors.primary.withValues(alpha: 0.05),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                borderSide: BorderSide(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                borderSide: BorderSide(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),

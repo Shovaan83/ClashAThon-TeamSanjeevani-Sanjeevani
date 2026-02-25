@@ -42,8 +42,9 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
     return Consumer<NotificationProvider>(
       builder: (context, provider, _) {
         final requests = provider.requests;
-        final pendingRequests =
-            requests.where((r) => r.status == RequestStatus.pending).toList();
+        final pendingRequests = requests
+            .where((r) => r.status == RequestStatus.pending)
+            .toList();
 
         return RefreshIndicator(
           color: AppColors.primary,
@@ -60,18 +61,15 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
                       // ── Greeting ──────────────────────────
                       Text(
                         'Hello, $_pharmacyName 🏥',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
+                        style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Manage incoming medicine requests.',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: AppColors.textSecondary),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
 
                       const SizedBox(height: 20),
@@ -132,9 +130,7 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
                         children: [
                           Text(
                             'Pending Requests',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           if (pendingRequests.length > 1)
@@ -166,7 +162,9 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 40),
+                      horizontal: 20,
+                      vertical: 40,
+                    ),
                     child: _ErrorState(
                       message: provider.error!,
                       onRetry: () => provider.fetchRequests(),
@@ -176,8 +174,7 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
               else if (pendingRequests.isEmpty)
                 const SliverToBoxAdapter(
                   child: Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 40),
                     child: _EmptyState(),
                   ),
                 )
@@ -211,9 +208,11 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
     if (mounted) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(ok
-              ? 'Request #${request.id} accepted!'
-              : 'Failed to accept request'),
+          content: Text(
+            ok
+                ? 'Request #${request.id} accepted!'
+                : 'Failed to accept request',
+          ),
           backgroundColor: ok ? AppColors.primary : AppColors.error,
         ),
       );
@@ -227,9 +226,9 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
     if (mounted) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(ok
-              ? 'Request #${request.id} rejected'
-              : 'Failed to reject request'),
+          content: Text(
+            ok ? 'Request #${request.id} rejected' : 'Failed to reject request',
+          ),
           backgroundColor: ok ? AppColors.textSecondary : AppColors.error,
         ),
       );
@@ -245,7 +244,8 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
       builder: (ctx) => AlertDialog(
         title: const Text('Accept All Requests'),
         content: const Text(
-            'Are you sure you want to accept all pending requests?'),
+          'Are you sure you want to accept all pending requests?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -447,8 +447,11 @@ class _MedicineRequestCard extends StatelessWidget {
                     color: AppColors.accent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child:
-                      const Icon(Icons.person, color: AppColors.accent, size: 24),
+                  child: const Icon(
+                    Icons.person,
+                    color: AppColors.accent,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
 
@@ -462,7 +465,8 @@ class _MedicineRequestCard extends StatelessWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              request.patientName ?? 'Patient #${request.patientId}',
+                              request.patientName ??
+                                  'Patient #${request.patientId}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
@@ -472,7 +476,9 @@ class _MedicineRequestCard extends StatelessWidget {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.accent.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
@@ -533,8 +539,10 @@ class _MedicineRequestCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Center(
-                      child: Icon(Icons.image_not_supported,
-                          color: AppColors.textSecondary),
+                      child: Icon(
+                        Icons.image_not_supported,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ),
@@ -546,8 +554,11 @@ class _MedicineRequestCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
             child: Row(
               children: [
-                const Icon(Icons.location_on_outlined,
-                    size: 14, color: AppColors.textSecondary),
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 14,
+                  color: AppColors.textSecondary,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   '${request.patientLat.toStringAsFixed(4)}, ${request.patientLng.toStringAsFixed(4)}',
@@ -659,25 +670,25 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(Icons.inbox_outlined,
-            size: 64,
-            color: AppColors.textSecondary.withValues(alpha: 0.5)),
+        Icon(
+          Icons.inbox_outlined,
+          size: 64,
+          color: AppColors.textSecondary.withValues(alpha: 0.5),
+        ),
         const SizedBox(height: 16),
         Text(
           'No pending requests',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(color: AppColors.textSecondary),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 8),
         Text(
           'New medicine requests from nearby patients will appear here.',
           textAlign: TextAlign.center,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: AppColors.textSecondary),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
         ),
       ],
     );
@@ -694,24 +705,25 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(Icons.wifi_off_outlined,
-            size: 56, color: AppColors.error.withValues(alpha: 0.6)),
+        Icon(
+          Icons.wifi_off_outlined,
+          size: 56,
+          color: AppColors.error.withValues(alpha: 0.6),
+        ),
         const SizedBox(height: 16),
         Text(
           'Could not load requests',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(color: AppColors.textPrimary),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: AppColors.textPrimary),
         ),
         const SizedBox(height: 6),
         Text(
           message,
           textAlign: TextAlign.center,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: AppColors.textSecondary),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 20),
         OutlinedButton.icon(
@@ -721,8 +733,9 @@ class _ErrorState extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
             side: const BorderSide(color: AppColors.primary),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         ),
       ],

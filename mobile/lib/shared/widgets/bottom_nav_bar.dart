@@ -114,13 +114,17 @@ class _NavItem extends StatelessWidget {
                     top: -4,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 1),
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.error,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       constraints: const BoxConstraints(
-                          minWidth: 16, minHeight: 14),
+                        minWidth: 16,
+                        minHeight: 14,
+                      ),
                       child: Text(
                         badge > 99 ? '99+' : '$badge',
                         textAlign: TextAlign.center,

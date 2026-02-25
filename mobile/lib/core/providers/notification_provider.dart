@@ -55,8 +55,7 @@ class NotificationProvider extends ChangeNotifier {
   final List<AppNotification> _notifications = [];
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
 
-  int get unreadCount =>
-      _notifications.where((n) => !n.isRead).length;
+  int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
   /// Medicine requests list (for pharmacy: nearby pending, for patient: own).
   List<MedicineRequestModel> _requests = [];
@@ -192,7 +191,9 @@ class NotificationProvider extends ChangeNotifier {
       id: 'taken_$requestId',
       type: 'request_taken',
       title: 'Request Filled',
-      body: msg['message'] ?? 'This request has been accepted by another pharmacy.',
+      body:
+          msg['message'] ??
+          'This request has been accepted by another pharmacy.',
       payload: msg,
       timestamp: DateTime.now(),
     );
@@ -246,7 +247,9 @@ class NotificationProvider extends ChangeNotifier {
   /// Accept all pending requests at once.
   Future<int> acceptAllRequests({String message = ''}) async {
     int accepted = 0;
-    final pending = _requests.where((r) => r.status == RequestStatus.pending).toList();
+    final pending = _requests
+        .where((r) => r.status == RequestStatus.pending)
+        .toList();
     for (final req in pending) {
       final ok = await acceptRequest(req.id, message: message);
       if (ok) accepted++;
