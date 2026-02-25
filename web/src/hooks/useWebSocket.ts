@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useRequestStore, type IncomingRequest } from '@/store/useRequestStore';
 import { WS_BASE_URL } from '@/lib/api';
@@ -22,6 +22,7 @@ export function usePharmacyWebSocket(callbacks?: PharmacyWsCallbacks) {
   const reconnectAttempt = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const unmounted = useRef(false);
+  const [connected, setConnected] = useState(false);
 
   const connect = useCallback(() => {
     if (unmounted.current || !token) return;
@@ -31,6 +32,7 @@ export function usePharmacyWebSocket(callbacks?: PharmacyWsCallbacks) {
 
     ws.onopen = () => {
       reconnectAttempt.current = 0;
+      setConnected(true);
       pingRef.current = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'ping' }));
@@ -74,6 +76,7 @@ export function usePharmacyWebSocket(callbacks?: PharmacyWsCallbacks) {
 
     ws.onclose = () => {
       clearInterval(pingRef.current);
+      setConnected(false);
       if (unmounted.current) return;
 
       const delay = Math.min(
@@ -100,7 +103,7 @@ export function usePharmacyWebSocket(callbacks?: PharmacyWsCallbacks) {
     };
   }, [connect]);
 
-  return wsRef;
+  return { wsRef, connected };
 }
 
 // ─── Customer WebSocket ──────────────────────────────────────────────────────

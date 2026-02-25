@@ -72,34 +72,53 @@ class MedicineRequestApiView(APIView):
         Get all medicine requests for the authenticated user
         """
         if hasattr(request.user, 'pharmacy'):
-            # If user is a pharmacy, get requests in their area
+            # If user is a pharmacy, get pending requests in their area
             pharmacy = request.user.pharmacy
-            
-            # Find requests where pharmacy is within radius
-            all_requests = MedicineRequest.objects.filter(
+
+            all_pending = MedicineRequest.objects.filter(
                 status='PENDING'
             ).select_related('patient')
-            
+
             nearby_requests = []
-            for req in all_requests:
+            for req in all_pending:
                 distance = MedicineRequest.calculate_distance(
                     pharmacy.lat, pharmacy.lng,
                     req.patient_lat, req.patient_lng
                 )
                 if distance <= req.radius_km:
                     nearby_requests.append(req)
-            
-            serializer = MedicineRequestSerializer(nearby_requests, many=True)
+
+            # Requests this pharmacy has accepted or responded to
+            history_requests = MedicineRequest.objects.filter(
+                pharmacy=pharmacy
+            ).select_related('patient').order_by('-updated_at')[:50]
+
+            # Real stats from PharmacyResponse records
+            accepted_count = PharmacyResponse.objects.filter(
+                pharmacy=pharmacy, response_type='ACCEPTED'
+            ).count()
+            rejected_count = PharmacyResponse.objects.filter(
+                pharmacy=pharmacy, response_type='REJECTED'
+            ).count()
+
+            pending_serializer = MedicineRequestSerializer(nearby_requests, many=True)
+            history_serializer = MedicineRequestSerializer(history_requests, many=True)
+
             return Response({
                 'count': len(nearby_requests),
-                'requests': serializer.data
+                'requests': pending_serializer.data,
+                'history': history_serializer.data,
+                'stats': {
+                    'accepted': accepted_count,
+                    'rejected': rejected_count,
+                },
             }, status=status.HTTP_200_OK)
         else:
             # If regular user, get their own requests
             requests = MedicineRequest.objects.filter(
                 patient=request.user
             ).select_related('pharmacy').order_by('-created_at')
-            
+
             serializer = MedicineRequestSerializer(requests, many=True)
             return Response({
                 'count': requests.count(),

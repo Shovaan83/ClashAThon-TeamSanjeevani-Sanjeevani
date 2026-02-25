@@ -9,6 +9,7 @@ import PatientProfilePage from './features/home/pages/PatientProfilePage';
 import PharmacyProfile from "./features/home/pages/PharmacyProfile";
 import SearchPage from "./features/home/pages/SearchPage";
 import DevTools from "./components/DevTools";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuthStore } from "./store/useAuthStore";
 import MedicineRequestHistory from "./features/home/MedicineRequestHistory";
 import IncomingRequestModal from "./features/home/components/IncomingRequestModal";
@@ -45,15 +46,15 @@ export default function App() {
         <Route path="/pharmacy/requests" element={<MedicineRequestHistory />} />
 
         {/* Broadcast (patient ping flow) */}
-        <Route path="/broadcast" element={<PatientDashboardPage />} />
+        <Route path="/broadcast" element={<ProtectedRoute><PatientDashboardPage /></ProtectedRoute>} />
 
         {/* Role-specific dashboards */}
-        <Route path="/dashboard/patient" element={<PatientDashboardPage />} />
-        <Route path="/dashboard/pharmacy" element={<PharmacyDashboardPage />} />
-        <Route path="/dashboard" element={<DashboardRedirect />} />
+        <Route path="/dashboard/patient" element={<ProtectedRoute><PatientDashboardPage /></ProtectedRoute>} />
+        <Route path="/dashboard/pharmacy" element={<ProtectedRoute><PharmacyDashboardPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardRedirect /></ProtectedRoute>} />
 
         {/* Profile */}
-        <Route path="/profile" element={<PatientProfilePage />} />
+        <Route path="/profile" element={<ProtectedRoute><PatientProfilePage /></ProtectedRoute>} />
 
         {/* Default redirects */}
         <Route path="/" element={<Navigate to="/home" replace />} />
