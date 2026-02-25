@@ -30,6 +30,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+# Used by WebSocket consumers to build absolute media URLs
+BASE_URL = "http://localhost:8000"
+
 
 # Application definition
 
