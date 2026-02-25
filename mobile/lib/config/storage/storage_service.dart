@@ -11,6 +11,7 @@ class StorageService {
   static const String _userRoleKey = 'user_role';
   static const String _userNameKey = 'user_name';
   static const String _userEmailKey = 'user_email';
+  static const String _userIdKey = 'user_id';
 
   // Auth Token
   Future<void> saveAuthToken(String token) async {
@@ -81,5 +82,16 @@ class StorageService {
   Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+  }
+
+  // User ID
+  Future<void> saveUserId(int id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_userIdKey, id);
+  }
+
+  Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_userIdKey);
   }
 }
