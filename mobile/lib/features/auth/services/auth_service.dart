@@ -115,6 +115,7 @@ class AuthService {
       access: authResponse.accessToken,
       refresh: authResponse.refreshToken,
     );
+    await _storage.saveUserId(authResponse.user.id);
     await _storage.saveUserRole(authResponse.user.role);
     await _storage.saveUserName(authResponse.user.name);
     await _storage.saveUserEmail(authResponse.user.email);
