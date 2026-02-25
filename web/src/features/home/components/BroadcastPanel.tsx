@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { ShieldCheck, Pencil, Eraser, Radio, FileText, MapPin, Loader2, AlertCircle, X, CheckCircle2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { api } from '@/lib/api';
+import { usePatientOffersStore } from '@/store/usePatientOffersStore';
 import type { GeoLocation } from '@/hooks/useGeolocation';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -222,6 +223,11 @@ export default function BroadcastPanel({ radius, setRadius, location, geoLoading
         success: true,
         message: res.message ?? `Request sent to ${res.pharmacies_notified ?? 0} nearby pharmacies`,
       });
+
+      // Activate the offers panel — clears previous offers and sets the request ID
+      if (res.request_id) {
+        usePatientOffersStore.getState().setActiveRequest(String(res.request_id));
+      }
     } catch (err) {
       setBroadcastResult({
         success: false,

@@ -172,7 +172,7 @@ class LogoutView(ResponseMixin, APIView):
         try:
             refresh_token = request.data.get("refresh")
             logger.info(f"Logout attempt - refresh token received: {bool(refresh_token)}")
-
+        
             if not refresh_token:
                 return self.validation_error_response(
                     message="Refresh token is required",

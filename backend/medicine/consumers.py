@@ -45,6 +45,9 @@ class CustomerConsumer(AsyncWebsocketConsumer):
             'user_id': self.user_id,
             'user_name': user.name
         }))
+
+        # Replay any pharmacy responses the patient may have missed while offline
+        await self.replay_pending_responses()
     
     async def disconnect(self, close_code):
         # Leave user's personal room
@@ -53,6 +56,71 @@ class CustomerConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
     
+    async def replay_pending_responses(self):
+        """
+        On reconnect, push every stored PharmacyResponse for the patient's
+        PENDING requests so the patient can see (and re-play audio for) all
+        offers that arrived while they were offline.
+        """
+        stored_responses = await self.get_stored_responses(self.user)
+        for r in stored_responses:
+            await self.send(text_data=json.dumps({
+                'type': 'pharmacy_response',
+                'replayed': True,
+                'response_id': r['response_id'],
+                'request_id': r['request_id'],
+                'response_type': r['response_type'],
+                'pharmacy_id': r['pharmacy_id'],
+                'pharmacy_name': r['pharmacy_name'],
+                'pharmacy_location': r['pharmacy_location'],
+                'message': r['message'],
+                'audio_url': r['audio_url'],
+                'substitute_name': r['substitute_name'],
+                'substitute_price': r['substitute_price'],
+                'timestamp': r['timestamp'],
+            }))
+
+    @database_sync_to_async
+    def get_stored_responses(self, user):
+        """
+        Return all PharmacyResponses for this patient's PENDING (still open)
+        medicine requests, ordered oldest-first so the patient sees them in
+        arrival order.
+        """
+        from django.conf import settings
+
+        responses = (
+            PharmacyResponse.objects
+            .filter(request__patient=user, request__status='PENDING')
+            .select_related('pharmacy__user', 'request')
+            .order_by('responded_at')
+        )
+
+        base_url = getattr(settings, 'BASE_URL', '')
+
+        result = []
+        for r in responses:
+            if r.audio:
+                raw = r.audio.url
+                audio_url = raw if raw.startswith('http') else f"{base_url.rstrip('/')}{raw}"
+            else:
+                audio_url = None
+
+            result.append({
+                'response_id': r.id,
+                'request_id': r.request_id,
+                'response_type': r.response_type,
+                'pharmacy_id': r.pharmacy_id,
+                'pharmacy_name': r.pharmacy.user.name,
+                'pharmacy_location': {'lat': r.pharmacy.lat, 'lng': r.pharmacy.lng},
+                'message': r.text_message,
+                'audio_url': audio_url,
+                'substitute_name': r.substitute_name or None,
+                'substitute_price': str(r.substitute_price) if r.substitute_price is not None else None,
+                'timestamp': r.responded_at.isoformat(),
+            })
+        return result
+
     async def receive(self, text_data):
         """
         Handle incoming messages from user
@@ -74,6 +142,7 @@ class CustomerConsumer(AsyncWebsocketConsumer):
         """
         await self.send(text_data=json.dumps({
             'type': 'pharmacy_response',
+            'response_id': event.get('response_id'),
             'request_id': event['request_id'],
             'response_type': event['response_type'],
             'pharmacy_id': event['pharmacy_id'],
@@ -193,6 +262,17 @@ class PharmacyConsumer(AsyncWebsocketConsumer):
             'type': 'request_taken',
             'request_id': event['request_id'],
             'message': event['message']
+        }))
+
+    async def pharmacy_selected(self, event):
+        """
+        Notify pharmacy that the patient chose them
+        """
+        await self.send(text_data=json.dumps({
+            'type': 'pharmacy_selected',
+            'request_id': event['request_id'],
+            'patient_name': event['patient_name'],
+            'message': event['message'],
         }))
     
     @database_sync_to_async
