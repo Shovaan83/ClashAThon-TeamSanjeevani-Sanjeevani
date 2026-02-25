@@ -34,3 +34,9 @@ class RegisterPharmacySerializer(serializers.ModelSerializer):
         )
 
         return pharmacy
+    
+
+class PharmacyRealSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pharmacy
+        fields = "__all__"

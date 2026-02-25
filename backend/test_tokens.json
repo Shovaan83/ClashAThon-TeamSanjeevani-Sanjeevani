@@ -1,0 +1,10 @@
+{
+  "customer": {
+    "email": "testcustomer@example.com",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcxOTU2MzY0LCJpYXQiOjE3NzE5NTYwNjQsImp0aSI6ImU1YzJlMDAyZTc5YjQ0M2Y4OTllMGU5OGM0ZDBlYWVmIiwidXNlcl9pZCI6IjEzIn0.-BrOWLgy467EwCkwgsgMQ7SfW_kKe-PY8xN17-cclu0"
+  },
+  "pharmacy_A": {
+    "email": "testpharmacyA@example.com",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcxOTU2MzY0LCJpYXQiOjE3NzE5NTYwNjQsImp0aSI6ImNjODYxNmMxMDZhZDQ5ZWY4MDkyZTg2NDQwMzM2Njk2IiwidXNlcl9pZCI6IjkifQ.peW-tIyZGmea0vA3MIgzpFcWTBzOvnonS3y9UOC6zHk"
+  }
+}
