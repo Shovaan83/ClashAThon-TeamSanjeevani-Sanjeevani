@@ -197,7 +197,8 @@ class PharmacyResponseApiView(APIView):
             channel_layer = get_channel_layer()
             audio_url = None
             if pharmacy_response.audio:
-                audio_url = request.build_absolute_uri(pharmacy_response.audio.url)
+                print(f"Audio file uploaded: {pharmacy_response.audio.url}")
+                audio_url = (pharmacy_response.audio.url)
             
             async_to_sync(channel_layer.group_send)(
                 f"user_{medicine_request.patient.id}",
@@ -235,6 +236,26 @@ class PharmacyResponseApiView(APIView):
             return Response({
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request):
+        """
+        Get all responses for the authenticated pharmacy
+        """
+        if not hasattr(request.user, 'pharmacy'):
+            return Response({
+                'error': 'Only pharmacies can access this endpoint'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        pharmacy = request.user.pharmacy
+        responses = PharmacyResponse.objects.filter(
+            pharmacy=pharmacy
+        ).select_related('request__patient').order_by('-responded_at')
+        
+        serializer = PharmacyResponseSerializer(responses, many=True)
+        return Response({
+            'count': responses.count(),
+            'responses': serializer.data
+        }, status=status.HTTP_200_OK)
 
 
 class PatientSelectPharmacyView(APIView):
