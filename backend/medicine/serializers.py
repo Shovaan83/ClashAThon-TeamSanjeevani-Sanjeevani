@@ -9,7 +9,7 @@ class MedicineRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = MedicineRequest
         fields = '__all__'
-        read_only_fields = ['status', 'created_at', 'updated_at', 'pharmacy']
+        read_only_fields = ['patient', 'status', 'created_at', 'updated_at', 'pharmacy']
         
 
 class PharmacyResponseSerializer(serializers.ModelSerializer):
