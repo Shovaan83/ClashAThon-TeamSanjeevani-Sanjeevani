@@ -90,9 +90,12 @@ export default function PharmacyDashboardPage() {
         request_id: request.id,
         response_type: 'REJECTED',
       });
-      useRequestStore.getState().removePendingRequest(request.id);
     } catch (err) {
       console.error('Decline failed:', err);
+    } finally {
+      // Always remove — if the backend rejected it (already taken / already responded),
+      // the request is no longer actionable and should leave the list.
+      useRequestStore.getState().removePendingRequest(request.id);
     }
   };
 

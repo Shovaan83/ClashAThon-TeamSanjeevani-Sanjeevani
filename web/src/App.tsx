@@ -14,6 +14,7 @@ import { useAuthStore } from "./store/useAuthStore";
 import MedicineRequestHistory from "./features/home/MedicineRequestHistory";
 import IncomingRequestModal from "./features/home/components/IncomingRequestModal";
 import { useRequestStore } from "./store/useRequestStore";
+import PharmacyAnalyticsPage from "./features/home/pages/PharmacyAnalyticsPage";
 
 
 function DashboardRedirect() {
@@ -44,6 +45,9 @@ export default function App() {
         {/* Pharmacy Profile */}
         <Route path="/pharmacy/:id" element={<PharmacyProfile />} />
         <Route path="/pharmacy/requests" element={<MedicineRequestHistory />} />
+
+        {/* Pharmacy Analytics */}
+        <Route path="/pharmacy/analytics" element={<ProtectedRoute><PharmacyAnalyticsPage /></ProtectedRoute>} />
 
         {/* Broadcast (patient ping flow) */}
         <Route path="/broadcast" element={<ProtectedRoute><PatientDashboardPage /></ProtectedRoute>} />

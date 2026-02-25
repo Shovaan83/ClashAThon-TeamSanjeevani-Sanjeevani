@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { X, CheckCircle2, XCircle, Volume2, ChevronDown, ChevronUp, Bell } from 'lucide-react';
+import { X, CheckCircle2, XCircle, Volume2, ChevronDown, ChevronUp, Bell, Repeat } from 'lucide-react';
 import type { PharmacyResponseEvent } from '@/hooks/useWebSocket';
 
 interface PharmacyResponsePanelProps {
@@ -51,17 +51,30 @@ function ResponseCard({
   index: number;
   onDismiss: (i: number) => void;
 }) {
+  const isSubstitute = response.response_type === 'SUBSTITUTE';
   const accepted = response.response_type === 'ACCEPTED';
   const time = new Date(response.timestamp).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
 
+  const borderColor = isSubstitute
+    ? 'border-l-[#FF6B35]'
+    : accepted
+    ? 'border-l-[#2D5A40]'
+    : 'border-l-[#FF6B35]';
+
+  const badgeClass = isSubstitute
+    ? 'bg-[#FF6B35]/10 text-[#FF6B35]'
+    : accepted
+    ? 'bg-[#2D5A40]/10 text-[#2D5A40]'
+    : 'bg-[#FF6B35]/10 text-[#FF6B35]';
+
+  const badgeLabel = isSubstitute ? 'Vikalpa' : accepted ? 'Accepted' : 'Rejected';
+
   return (
     <div
-      className={`relative bg-white border shadow-md p-4 flex flex-col gap-1 animate-in slide-in-from-left-4 duration-300 ${
-        accepted ? 'border-l-4 border-l-[#2D5A40]' : 'border-l-4 border-l-[#FF6B35]'
-      }`}
+      className={`relative bg-white border shadow-md p-4 flex flex-col gap-1 animate-in slide-in-from-left-4 duration-300 border-l-4 ${borderColor}`}
     >
       {/* Dismiss */}
       <button
@@ -75,24 +88,32 @@ function ResponseCard({
 
       {/* Header */}
       <div className="flex items-center gap-2 pr-5">
-        {accepted ? (
+        {isSubstitute ? (
+          <Repeat size={16} className="text-[#FF6B35] shrink-0" />
+        ) : accepted ? (
           <CheckCircle2 size={16} className="text-[#2D5A40] shrink-0" />
         ) : (
           <XCircle size={16} className="text-[#FF6B35] shrink-0" />
         )}
         <span className="font-bold text-sm text-[#1C1917] truncate">{response.pharmacy_name}</span>
-        <span
-          className={`ml-auto text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 shrink-0 ${
-            accepted
-              ? 'bg-[#2D5A40]/10 text-[#2D5A40]'
-              : 'bg-[#FF6B35]/10 text-[#FF6B35]'
-          }`}
-        >
-          {accepted ? 'Accepted' : 'Rejected'}
+        <span className={`ml-auto text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 shrink-0 ${badgeClass}`}>
+          {badgeLabel}
         </span>
       </div>
 
-      {/* Message */}
+      {/* Substitute details — only for Vikalpa responses */}
+      {isSubstitute && response.substitute_name && (
+        <div className="mt-1 border border-[#FF6B35]/20 bg-[#FF6B35]/5 px-3 py-2">
+          <p className="text-xs font-bold text-[#1C1917]">{response.substitute_name}</p>
+          {response.substitute_price && (
+            <p className="text-xs text-[#FF6B35] font-bold mt-0.5">
+              Rs. {response.substitute_price}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Message / pharmacist note */}
       {response.message && (
         <p className="text-xs text-stone-500 leading-relaxed mt-0.5 pr-2">
           &ldquo;{response.message}&rdquo;
@@ -113,7 +134,9 @@ export default function PharmacyResponsePanel({ responses, onDismiss }: Pharmacy
 
   if (responses.length === 0) return null;
 
-  const acceptedCount = responses.filter((r) => r.response_type === 'ACCEPTED').length;
+  const acceptedCount = responses.filter(
+    (r) => r.response_type === 'ACCEPTED' || r.response_type === 'SUBSTITUTE'
+  ).length;
 
   return (
     <div className="absolute bottom-5 left-5 z-400 w-72 flex flex-col gap-2">

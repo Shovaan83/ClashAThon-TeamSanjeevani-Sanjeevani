@@ -81,6 +81,8 @@ class CustomerConsumer(AsyncWebsocketConsumer):
             'pharmacy_location': event['pharmacy_location'],
             'message': event['message'],
             'audio_url': event.get('audio_url'),
+            'substitute_name': event.get('substitute_name'),
+            'substitute_price': event.get('substitute_price'),
             'timestamp': event['timestamp']
         }))
 
