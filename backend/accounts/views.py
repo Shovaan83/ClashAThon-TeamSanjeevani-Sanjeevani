@@ -34,7 +34,8 @@ class RegisterUserEmail(ResponseMixin,APIView):
             defaults={'otp': otp, 'is_verified': False}
         )
 
-        # Send email directly (synchronous) - more reliable for development
+        # Send email directly (synchronous) - revert back as Celery setup is complex
+        # The WinError 10060 is likely a network/SMTP configuration issue, not async related
         try:
             send_email(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
         except Exception as e:
