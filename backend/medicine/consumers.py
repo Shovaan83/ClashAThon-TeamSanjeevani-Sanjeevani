@@ -74,6 +74,7 @@ class CustomerConsumer(AsyncWebsocketConsumer):
         """
         await self.send(text_data=json.dumps({
             'type': 'pharmacy_response',
+            'response_id': event.get('response_id'),
             'request_id': event['request_id'],
             'response_type': event['response_type'],
             'pharmacy_id': event['pharmacy_id'],
@@ -81,6 +82,8 @@ class CustomerConsumer(AsyncWebsocketConsumer):
             'pharmacy_location': event['pharmacy_location'],
             'message': event['message'],
             'audio_url': event.get('audio_url'),
+            'substitute_name': event.get('substitute_name'),
+            'substitute_price': event.get('substitute_price'),
             'timestamp': event['timestamp']
         }))
 
@@ -191,6 +194,17 @@ class PharmacyConsumer(AsyncWebsocketConsumer):
             'type': 'request_taken',
             'request_id': event['request_id'],
             'message': event['message']
+        }))
+
+    async def pharmacy_selected(self, event):
+        """
+        Notify pharmacy that the patient chose them
+        """
+        await self.send(text_data=json.dumps({
+            'type': 'pharmacy_selected',
+            'request_id': event['request_id'],
+            'patient_name': event['patient_name'],
+            'message': event['message'],
         }))
     
     @database_sync_to_async

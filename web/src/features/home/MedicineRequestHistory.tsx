@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, Plus, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import PharmacyNavbar from "./components/PharmacyNavbar";
+import Navbar from "@/components/Navbar";
 import MedicineRequestCard from "./components/MedicineRequestCard";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -112,7 +112,7 @@ export default function MedicineRequestHistory() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
-      <PharmacyNavbar />
+      <Navbar />
 
       <div className="mx-auto max-w-7xl px-4 py-6 lg:px-20">
         {/* Header */}

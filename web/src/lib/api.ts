@@ -11,22 +11,96 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach stored JWT token on every request
-apiClient.interceptors.request.use((config) => {
+// ─── Helpers to read/write persisted auth state ──────────────────────────────
+
+function getStoredTokens(): { access: string | null; refresh: string | null } {
   try {
     const stored = localStorage.getItem('sanjeevani-auth');
     if (stored) {
-      const parsed = JSON.parse(stored) as { state?: { token?: string } };
-      const token = parsed?.state?.token;
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      const parsed = JSON.parse(stored) as { state?: { token?: string; refreshToken?: string } };
+      return {
+        access: parsed?.state?.token ?? null,
+        refresh: parsed?.state?.refreshToken ?? null,
+      };
     }
   } catch {
     // ignore parse errors
   }
+  return { access: null, refresh: null };
+}
+
+// Attach stored JWT access token on every request
+apiClient.interceptors.request.use((config) => {
+  const { access } = getStoredTokens();
+  if (access) {
+    config.headers.Authorization = `Bearer ${access}`;
+  }
   return config;
 });
+
+// Handle 401 responses: try to refresh the token once, then log out
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function onRefreshed(token: string) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      const { refresh } = getStoredTokens();
+
+      // No refresh token — force logout
+      if (!refresh) {
+        const { useAuthStore } = await import('@/store/useAuthStore');
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // Queue the request until the refresh completes
+        return new Promise((resolve) => {
+          refreshSubscribers.push((newToken: string) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            resolve(apiClient(originalRequest));
+          });
+        });
+      }
+
+      isRefreshing = true;
+      try {
+        const res = await apiClient.post<{ access: string }>('/token/refresh/', { refresh });
+        const newAccessToken = res.data.access;
+
+        // Persist the new access token in the store
+        const { useAuthStore } = await import('@/store/useAuthStore');
+        useAuthStore.getState().setAccessToken(newAccessToken);
+
+        onRefreshed(newAccessToken);
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return apiClient(originalRequest);
+      } catch {
+        // Refresh failed — log the user out
+        const { useAuthStore } = await import('@/store/useAuthStore');
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return Promise.reject(error);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 // ─── Error helper ─────────────────────────────────────────────────────────────
 
@@ -189,19 +263,34 @@ export const api = {
   },
 
   /**
-   * Pharmacy responds to a medicine request (accept/reject).
+   * Pharmacy responds to a medicine request (accept/reject/substitute).
    * POST /medicine/response/
    */
   async respondToMedicineRequest(data: {
     request_id: string | number;
-    response_type: 'ACCEPTED' | 'REJECTED';
+    response_type: 'ACCEPTED' | 'REJECTED' | 'SUBSTITUTE';
     text_message?: string;
+    substitute_name?: string;
+    substitute_price?: number;
   }) {
     try {
       const res = await apiClient.post('/medicine/response/', data);
       return res.data;
     } catch (err) {
       throw new Error(extractError(err, 'Failed to send response. Please try again.'));
+    }
+  },
+
+  /**
+   * Patient selects a specific pharmacy offer to fulfil their request.
+   * POST /medicine/select/
+   */
+  async selectPharmacy(responseId: number) {
+    try {
+      const res = await apiClient.post('/medicine/select/', { response_id: responseId });
+      return res.data;
+    } catch (err) {
+      throw new Error(extractError(err, 'Failed to select pharmacy. Please try again.'));
     }
   },
 

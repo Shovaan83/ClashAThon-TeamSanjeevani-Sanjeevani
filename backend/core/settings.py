@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'customer',
     'accountsprofile',
     'DailyRemainder',
+    'rest_framework_simplejwt.token_blacklist'
 ]
 
 MIDDLEWARE = [
@@ -200,15 +201,15 @@ from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
     'generate-daily-occurrences': {
-        'task': 'DailyRemainder.task.generate_daily_occurrences',
+        'task': 'DailyRemainder.tasks.generate_daily_occurrences',
         'schedule': crontab(hour=0, minute=0),  # Run daily at midnight
     },
     'check-missed-occurrences': {
-        'task': 'DailyRemainder.task.check_missed_occurrences',
+        'task': 'DailyRemainder.tasks.check_missed_occurrences',
         'schedule': crontab(minute='*/30'),  # Run every 30 minutes
     },
     'send-reminder-notifications': {
-        'task': 'DailyRemainder.task.send_reminder_notifications',
+        'task': 'DailyRemainder.tasks.send_reminder_notifications',
         'schedule': crontab(minute='*/5'),  # Run every 5 minutes
     },
 }

@@ -221,3 +221,5 @@ firebase-credentials.json
 
 celerybeat-schedule-shm
 celerybeat-schedule-wal
+
+firebase-credentials.json

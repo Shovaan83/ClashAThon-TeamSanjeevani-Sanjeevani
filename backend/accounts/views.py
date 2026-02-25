@@ -18,7 +18,10 @@ from rest_framework.response import Response
 from rest_framework import status
 import threading
 import logging
+from rest_framework_simplejwt.tokens import RefreshToken
 
+
+from rest_framework.permissions import IsAuthenticated
 
 from .models import Otp
 
@@ -158,3 +161,34 @@ class LoginView(ResponseMixin, APIView):
             message="Login successful"
         )
     
+
+
+
+class LogoutView(ResponseMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh")
+            logger.info(f"Logout attempt - refresh token received: {bool(refresh_token)}")
+
+            if not refresh_token:
+                return self.validation_error_response(
+                    message="Refresh token is required",
+                    errors={"refresh": "This field is required"}
+                )
+
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            logger.info(f"Logout successful for user: {request.user.email}")
+
+            return self.success_response(
+                message="Logout successful"
+            )
+
+        except Exception as e:
+            logger.error(f"Logout failed: {type(e).__name__}: {str(e)}")
+            return self.error_response(
+                message=f"Invalid or expired token: {str(e)}",
+                error=str(e)
+            )

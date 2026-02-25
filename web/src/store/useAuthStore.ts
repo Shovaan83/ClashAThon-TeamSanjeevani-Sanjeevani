@@ -13,9 +13,11 @@ export interface User {
 
 export interface AuthState {
   token: string | null;
+  refreshToken: string | null;
   user: User | null;
   isAuthenticated: boolean;
-  login: (token: string, user: User) => void;
+  login: (accessToken: string, user: User, refreshToken?: string) => void;
+  setAccessToken: (token: string) => void;
   logout: () => void;
   setVerified: (status: boolean) => void;
 }
@@ -24,12 +26,16 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       token: null,
+      refreshToken: null,
       user: null,
       isAuthenticated: false,
 
-      login: (token, user) => set({ token, user, isAuthenticated: true }),
+      login: (accessToken, user, refreshToken) =>
+        set({ token: accessToken, refreshToken: refreshToken ?? null, user, isAuthenticated: true }),
 
-      logout: () => set({ token: null, user: null, isAuthenticated: false }),
+      setAccessToken: (token) => set({ token }),
+
+      logout: () => set({ token: null, refreshToken: null, user: null, isAuthenticated: false }),
 
       setVerified: (status) =>
         set((state) => ({

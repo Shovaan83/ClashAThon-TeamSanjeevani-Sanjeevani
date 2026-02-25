@@ -35,7 +35,7 @@ export default function LoginForm() {
         email: user.email,
         role,
         isVerified: true,
-      });
+      }, tokens.refresh);
 
       navigate(role === 'patient' ? '/dashboard/patient' : '/dashboard/pharmacy');
     } catch (err) {

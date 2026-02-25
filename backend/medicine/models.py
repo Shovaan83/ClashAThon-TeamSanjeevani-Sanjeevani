@@ -78,10 +78,11 @@ class MedicineRequest(models.Model):
         return R * c
 
 class PharmacyResponse(models.Model):
-    """Track responses from pharmacies (accept/reject with optional audio)"""
+    """Track responses from pharmacies (accept/reject/substitute with optional audio)"""
     RESPONSE_CHOICES = (
         ("ACCEPTED", "ACCEPTED"),
         ("REJECTED", "REJECTED"),
+        ("SUBSTITUTE", "SUBSTITUTE"),
     )
     
     request = models.ForeignKey(
@@ -108,6 +109,11 @@ class PharmacyResponse(models.Model):
     )
 
     text_message = models.TextField(blank=True)
+
+    # Vikalpa (substitute) fields — only populated when response_type == SUBSTITUTE
+    substitute_name = models.CharField(max_length=255, blank=True, default='')
+    substitute_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     responded_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
