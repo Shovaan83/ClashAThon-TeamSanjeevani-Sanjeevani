@@ -24,11 +24,14 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-    id: json['id'] as int,
-    email: json['email'] as String,
-    name: json['name'] as String,
-    phoneNumber: json['phone_number'] as String,
-    role: json['role'] as String,
+    // id is absent in the pharmacy-list nested user (RegisterUserSerializer)
+    // so we fall back to 0 when not present.
+    id: (json['id'] as int?) ?? 0,
+    email: (json['email'] as String?) ?? '',
+    name: (json['name'] as String?) ?? '',
+    phoneNumber: (json['phone_number'] as String?) ?? '',
+    // role is absent in the pharmacy-list nested user response.
+    role: (json['role'] as String?) ?? '',
     dateJoined: json['date_joined'] != null
         ? DateTime.tryParse(json['date_joined'] as String)
         : null,

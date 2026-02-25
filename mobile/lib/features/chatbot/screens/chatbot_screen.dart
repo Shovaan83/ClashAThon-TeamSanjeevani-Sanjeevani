@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/system_prompt.dart';
@@ -56,9 +60,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  /// Only the messages shown in the chat list (excludes the system prompt).
-  List<ChatMessage> get _visibleMessages =>
-      _messages.where((m) => m.role != MessageRole.system).toList();
+  /// Only the messages shown in the chat list (excludes system prompt and
+  /// hidden OCR prompt messages).
+  List<ChatMessage> get _visibleMessages => _messages
+      .where(
+        (m) =>
+            m.role != MessageRole.system &&
+            !(m.role == MessageRole.user &&
+                m.content.startsWith('Here is text extracted from')),
+      )
+      .toList();
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -121,6 +132,132 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _scrollToBottom();
   }
 
+  /// Lets the user pick or capture a prescription / report image, runs
+  /// ML Kit OCR, then sends the extracted text to the chatbot for analysis.
+  Future<void> _pickAndAnalyseImage() async {
+    if (_isLoading) return;
+
+    // Let the user choose camera or gallery
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Camera'),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    // Show the image as a user message immediately
+    setState(() {
+      _messages.add(
+        ChatMessage(
+          content: '📷 Prescription image sent for analysis…',
+          role: MessageRole.user,
+          timestamp: DateTime.now(),
+          imagePath: picked.path,
+        ),
+      );
+      _isLoading = true;
+    });
+    _scrollToBottom();
+
+    try {
+      // Run OCR
+      final inputImage = InputImage.fromFilePath(picked.path);
+      final textRecognizer = TextRecognizer();
+      final recognised = await textRecognizer.processImage(inputImage);
+      await textRecognizer.close();
+
+      final ocrText = recognised.text.trim();
+
+      if (ocrText.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              content:
+                  "I couldn't extract any text from that image. Please try a clearer photo of the prescription or report.",
+              role: MessageRole.assistant,
+              timestamp: DateTime.now(),
+            ),
+          );
+          _isLoading = false;
+        });
+        _scrollToBottom();
+        return;
+      }
+
+      // Build a prompt with the extracted text
+      final prompt =
+          'Here is text extracted from a prescription / medical report image '
+          '(via OCR). Please analyse this and explain what the report says, '
+          'including any medications, dosages, and recommendations:\n\n'
+          '--- OCR TEXT ---\n$ocrText\n--- END ---';
+
+      // Add as a hidden user message (the visible one already shows the image)
+      _messages.add(
+        ChatMessage(
+          content: prompt,
+          role: MessageRole.user,
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      final reply = await _service.sendMessage(_messages);
+      if (!mounted) return;
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            content: reply,
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          ),
+        );
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            content:
+                'Sorry, I encountered an error analysing the image. Please try again.',
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          ),
+        );
+        _isLoading = false;
+      });
+    }
+    _scrollToBottom();
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
@@ -147,6 +284,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             controller: _inputController,
             isLoading: _isLoading,
             onSend: _sendMessage,
+            onPickImage: _pickAndAnalyseImage,
           ),
         ],
       ),
@@ -309,13 +447,32 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Text(
-                message.content,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: _isUser ? Colors.white : AppColors.textPrimary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Show image thumbnail if present
+                  if (message.imagePath != null) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        File(message.imagePath!),
+                        width: double.infinity,
+                        height: 180,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                  Text(
+                    message.content,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: _isUser ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -438,11 +595,13 @@ class _ChatInputBar extends StatelessWidget {
   final TextEditingController controller;
   final bool isLoading;
   final VoidCallback onSend;
+  final VoidCallback onPickImage;
 
   const _ChatInputBar({
     required this.controller,
     required this.isLoading,
     required this.onSend,
+    required this.onPickImage,
   });
 
   @override
@@ -460,6 +619,17 @@ class _ChatInputBar extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // Image picker button
+            IconButton(
+              onPressed: isLoading ? null : onPickImage,
+              icon: Icon(
+                Icons.image_outlined,
+                color: isLoading ? AppColors.textSecondary : AppColors.primary,
+              ),
+              tooltip: 'Send prescription image',
+              padding: const EdgeInsets.only(bottom: 4),
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+            ),
             Expanded(
               child: TextField(
                 controller: controller,

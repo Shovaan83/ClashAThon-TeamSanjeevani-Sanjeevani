@@ -1,3 +1,5 @@
+import 'package:sanjeevani/shared/utils/url_helper.dart';
+
 /// Mirrors `medicine/models.py :: MedicineRequest`.
 ///
 /// STATUS_CHOICES: PENDING | ACCEPTED | REJECTED | CANCELLED
@@ -80,7 +82,7 @@ class MedicineRequestModel {
         patientLng: (json['patient_lng'] as num).toDouble(),
         radiusKm: (json['radius_km'] as num).toDouble(),
         quantity: json['quantity'] as int,
-        imageUrl: json['image'] as String,
+        imageUrl: UrlHelper.resolveMediaUrl(json['image'] as String?) ?? '',
         status: RequestStatus.fromString(json['status'] as String),
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),

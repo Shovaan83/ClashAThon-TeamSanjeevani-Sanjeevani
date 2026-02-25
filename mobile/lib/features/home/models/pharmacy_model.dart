@@ -22,7 +22,8 @@ class PharmacyModel {
   });
 
   factory PharmacyModel.fromJson(Map<String, dynamic> json) => PharmacyModel(
-    id: json['id'] as int,
+    // id is absent when the list uses RegisterPharmacySerializer
+    id: (json['id'] as int?) ?? 0,
     user: json['user'] is Map<String, dynamic>
         ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
         : UserModel(
@@ -32,8 +33,8 @@ class PharmacyModel {
             phoneNumber: '',
             role: 'PHARMACY',
           ),
-    lat: (json['lat'] as num).toDouble(),
-    lng: (json['lng'] as num).toDouble(),
+    lat: (json['lat'] as num?)?.toDouble() ?? 0.0,
+    lng: (json['lng'] as num?)?.toDouble() ?? 0.0,
     document: json['document'] != null
         ? PharmacyDocumentModel.fromJson(
             json['document'] as Map<String, dynamic>,
