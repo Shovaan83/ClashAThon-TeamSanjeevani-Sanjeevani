@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'medicine',
     'customer',
     'accountsprofile',
+    'DailyRemainder',
 ]
 
 MIDDLEWARE = [

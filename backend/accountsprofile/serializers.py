@@ -15,7 +15,9 @@ class PharmacySerializer(serializers.ModelSerializer):
 
 
 class PharmacyProfileSerializer(serializers.ModelSerializer):
-    class Meta:
+    pharmacy = PharmacySerializer()
+    pharmacy_docs = PharmacyDocumentSerializer()
 
-        pharmacy = PharmacySerializer()
-        pharmacy_docs = PharmacyDocumentSerializer()
+    class Meta:
+        model = PharmacyProfile
+        fields = ['pharmacy', 'pharmacy_docs', 'phone_number', 'address']
