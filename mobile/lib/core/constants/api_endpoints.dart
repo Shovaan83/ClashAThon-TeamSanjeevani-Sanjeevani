@@ -51,7 +51,11 @@ class ApiEndpoints {
   static const String medicineRequest = 'medicine/request/';
 
   /// POST  /medicine/response/  — pharmacy responds accept/reject
+  /// GET   /medicine/response/?request_id=<id>  — patient fetches pharmacy offers
   static const String medicineResponse = 'medicine/response/';
+
+  /// POST  /medicine/select/  — patient selects a pharmacy offer
+  static const String medicineSelect = 'medicine/select/';
 
   // ── Accounts Profile (pharmacy extended profile) ─────────
   /// POST  /api/profilecreate/  — create pharmacy extended profile

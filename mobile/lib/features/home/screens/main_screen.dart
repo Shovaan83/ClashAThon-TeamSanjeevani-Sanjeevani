@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
+import 'package:sanjeevani/core/service/fcm_service.dart';
 import 'package:sanjeevani/features/home/screens/add_screen.dart';
 import 'package:sanjeevani/features/home/screens/notification_screen.dart';
 import 'package:sanjeevani/features/home/screens/patient_home_content.dart';
@@ -62,6 +63,22 @@ class _MainScreenState extends State<MainScreen> {
         context.read<NotificationProvider>().init();
       });
     }
+
+    // Initialise FCM (register device token, listen for pushes).
+    // Done here instead of main() because the JWT token is now available.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await FcmService.instance.init();
+
+      // Wire FCM broadcast events to NotificationProvider so that push
+      // notifications arriving via FCM trigger the same UI updates as
+      // WebSocket messages (refresh requests, show notifications, etc.).
+      if (mounted) {
+        final provider = context.read<NotificationProvider>();
+        FcmService.instance.onBroadcastEvent = (data) {
+          provider.fetchRequests(); // refresh on any broadcast push
+        };
+      }
+    });
   }
 
   String get _appBarTitle {

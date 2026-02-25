@@ -19,8 +19,8 @@ void main() async {
   // Register the background message handler (must be top-level function)
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // Initialise FCM (requests permission, registers device token)
-  await FcmService.instance.init();
+  // NOTE: FcmService.instance.init() is called from MainScreen.initState()
+  // AFTER login, when a JWT token is available for device-token registration.
 
   runApp(
     ChangeNotifierProvider(

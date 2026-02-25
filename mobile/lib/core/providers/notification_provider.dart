@@ -18,7 +18,8 @@ String _friendlyError(Object e) {
 /// In-app notification item generated from WebSocket messages or API data.
 class AppNotification {
   final String id;
-  final String type; // 'new_request', 'pharmacy_response', 'request_taken'
+  final String
+  type; // 'new_request', 'pharmacy_response', 'request_taken', 'pharmacy_selected'
   final String title;
   final String body;
   final Map<String, dynamic> payload;
@@ -49,6 +50,7 @@ class AppNotification {
 /// - Connects to `ws/customer/` WebSocket
 /// - Receives `pharmacy_response` notifications in real-time
 /// - Tracks own broadcast requests
+/// - Receives `pharmacy_selected` when they are chosen
 class NotificationProvider extends ChangeNotifier {
   final WebSocketService _ws = WebSocketService();
   final MedicineService _medicineService = MedicineService();
@@ -73,6 +75,16 @@ class NotificationProvider extends ChangeNotifier {
   /// Medicine requests list (for pharmacy: nearby pending, for patient: own).
   List<MedicineRequestModel> _requests = [];
   List<MedicineRequestModel> get requests => List.unmodifiable(_requests);
+
+  /// Pharmacy responses received via WebSocket for current session.
+  /// Keyed by request ID → list of responses.
+  final Map<int, List<PharmacyResponseModel>> _pharmacyResponses = {};
+  Map<int, List<PharmacyResponseModel>> get pharmacyResponses =>
+      Map.unmodifiable(_pharmacyResponses);
+
+  /// Get responses for a specific request from in-memory cache.
+  List<PharmacyResponseModel> getResponsesForRequest(int requestId) =>
+      List.unmodifiable(_pharmacyResponses[requestId] ?? []);
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -120,6 +132,45 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Fetch pharmacy responses for a specific request from REST API.
+  Future<List<PharmacyResponseModel>> fetchResponsesForRequest(
+    int requestId,
+  ) async {
+    try {
+      final responses = await _medicineService.getResponsesForRequest(
+        requestId,
+      );
+      _pharmacyResponses[requestId] = responses;
+
+      // Persist audio URLs from responses
+      for (final r in responses) {
+        if (r.audioUrl != null && r.audioUrl!.isNotEmpty) {
+          await _storage.saveAudioUrl(requestId, r.audioUrl!);
+        }
+      }
+
+      notifyListeners();
+      return responses;
+    } catch (e) {
+      debugPrint('Failed to fetch responses for request $requestId: $e');
+      return _pharmacyResponses[requestId] ?? [];
+    }
+  }
+
+  /// Patient selects a pharmacy offer.
+  Future<bool> selectPharmacy(int responseId) async {
+    try {
+      await _medicineService.selectPharmacy(responseId);
+      // Refresh requests to get updated status
+      await fetchRequests();
+      return true;
+    } catch (e) {
+      _error = _friendlyError(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
   // ── WebSocket message handler ─────────────────────────────────────────────
 
   void _handleMessage(Map<String, dynamic> message) {
@@ -139,6 +190,11 @@ class NotificationProvider extends ChangeNotifier {
       // Pharmacy: a request was accepted by another pharmacy
       case 'request_taken':
         _handleRequestTaken(message);
+        break;
+
+      // Pharmacy: the patient chose this pharmacy
+      case 'pharmacy_selected':
+        _handlePharmacySelected(message);
         break;
 
       case 'connection':
@@ -176,14 +232,25 @@ class NotificationProvider extends ChangeNotifier {
     final responseType = msg['response_type'] as String? ?? '';
     final pharmacyName = msg['pharmacy_name'] ?? 'A pharmacy';
 
+    // Parse into a proper model so the UI can display all fields.
+    final response = PharmacyResponseModel.fromWebSocket(msg);
+
+    // Store in our in-memory response cache.
+    final requestId = response.requestId;
+    _pharmacyResponses.putIfAbsent(requestId, () => []);
+    // Avoid duplicates
+    if (!_pharmacyResponses[requestId]!.any((r) => r.id == response.id)) {
+      _pharmacyResponses[requestId]!.add(response);
+    }
+
     final notification = AppNotification(
       id: 'resp_${msg['request_id']}_${msg['pharmacy_id']}',
       type: 'pharmacy_response',
       title: responseType == 'ACCEPTED'
-          ? 'Request Accepted! 🎉'
+          ? 'Pharmacy Offer Received!'
           : 'Request Declined',
       body: responseType == 'ACCEPTED'
-          ? '$pharmacyName has accepted your prescription request.'
+          ? '$pharmacyName has offered to fulfil your prescription.'
           : '$pharmacyName has declined your request.',
       payload: msg,
       timestamp: msg['timestamp'] != null
@@ -194,18 +261,34 @@ class NotificationProvider extends ChangeNotifier {
     _notifications.insert(0, notification);
 
     // Persist audio URL so it survives app restarts.
-    final audioUrl = msg['audio_url'] as String?;
-    final requestId = msg['request_id'];
-    if (audioUrl != null && audioUrl.isNotEmpty && requestId != null) {
-      _storage.saveAudioUrl(
-        requestId is int ? requestId : int.tryParse(requestId.toString()) ?? 0,
-        audioUrl,
-      );
+    final audioUrl = response.audioUrl;
+    if (audioUrl != null && audioUrl.isNotEmpty) {
+      _storage.saveAudioUrl(requestId, audioUrl);
     }
 
     notifyListeners();
 
     // Refresh requests to get updated status
+    fetchRequests();
+  }
+
+  void _handlePharmacySelected(Map<String, dynamic> msg) {
+    final requestId = msg['request_id'];
+    final patientName = msg['patient_name'] ?? 'The patient';
+
+    final notification = AppNotification(
+      id: 'selected_$requestId',
+      type: 'pharmacy_selected',
+      title: 'You were selected! 🎉',
+      body: '$patientName chose your pharmacy for their prescription.',
+      payload: msg,
+      timestamp: DateTime.now(),
+    );
+
+    _notifications.insert(0, notification);
+    notifyListeners();
+
+    // Refresh requests
     fetchRequests();
   }
 

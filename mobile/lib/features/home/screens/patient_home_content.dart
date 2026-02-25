@@ -5,6 +5,8 @@ import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
 import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model.dart';
+import 'package:sanjeevani/features/home/broadcast/models/pharmacy_response_model.dart';
+import 'package:sanjeevani/features/home/broadcast/screens/pharmacy_offers_screen.dart';
 import 'package:sanjeevani/features/home/services/customer_service.dart';
 import 'package:sanjeevani/shared/utils/time_utils.dart';
 import 'package:sanjeevani/shared/utils/url_helper.dart';
@@ -472,28 +474,208 @@ class _BroadcastCard extends StatelessWidget {
             ],
           ),
 
-          // ── Audio play button for accepted broadcasts ──────
-          if (broadcast.status == RequestStatus.accepted)
-            _AudioFromNotification(requestId: broadcast.id),
+          // ── Pharmacy offers / audio section ────────────
+          if (broadcast.status == RequestStatus.pending ||
+              broadcast.status == RequestStatus.accepted)
+            _PharmacyResponseSection(broadcast: broadcast),
         ],
       ),
     );
   }
 }
 
-/// Looks up the [NotificationProvider] for a `pharmacy_response` notification
-/// matching [requestId], and shows a "Play Voice Message" button when audio
-/// is available. Falls back to persisted audio URLs in [StorageService] so
-/// that audio survives app restarts.
-class _AudioFromNotification extends StatefulWidget {
-  final int requestId;
-  const _AudioFromNotification({required this.requestId});
+/// Shows pharmacy responses / offers for a broadcast.
+///
+/// For **PENDING** requests: fetches offers from REST API and shows a button
+/// to view all offers + select a pharmacy.
+///
+/// For **ACCEPTED** requests: shows the accepted pharmacy's audio message
+/// loaded from the REST API (or cached / WebSocket).
+class _PharmacyResponseSection extends StatefulWidget {
+  final MedicineRequestModel broadcast;
+  const _PharmacyResponseSection({required this.broadcast});
 
   @override
-  State<_AudioFromNotification> createState() => _AudioFromNotificationState();
+  State<_PharmacyResponseSection> createState() =>
+      _PharmacyResponseSectionState();
 }
 
-class _AudioFromNotificationState extends State<_AudioFromNotification> {
+class _PharmacyResponseSectionState extends State<_PharmacyResponseSection> {
+  List<PharmacyResponseModel>? _responses;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadResponses();
+  }
+
+  Future<void> _loadResponses() async {
+    final provider = Provider.of<NotificationProvider>(context, listen: false);
+    try {
+      final responses = await provider.fetchResponsesForRequest(
+        widget.broadcast.id,
+      );
+      if (mounted) {
+        setState(() {
+          _responses = responses;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+
+    final accepted = (_responses ?? [])
+        .where((r) => r.responseType == PharmacyResponseType.accepted)
+        .toList();
+
+    // ── PENDING: show "View Offers" button ──────────
+    if (widget.broadcast.status == RequestStatus.pending) {
+      if (accepted.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.hourglass_top_rounded,
+                size: 16,
+                color: AppColors.textSecondary.withValues(alpha: 0.6),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Waiting for pharmacy offers…',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary.withValues(alpha: 0.6),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              final parentState = context
+                  .findAncestorStateOfType<_PatientHomeContentState>();
+              final result = await nav.push<bool>(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      PharmacyOffersScreen(requestId: widget.broadcast.id),
+                ),
+              );
+              if (result == true && mounted) {
+                // Pharmacy was selected — tell parent to refresh
+                parentState?._refresh();
+              }
+            },
+            icon: const Icon(Icons.local_pharmacy_outlined, size: 18),
+            label: Text(
+              'View ${accepted.length} Offer${accepted.length == 1 ? '' : 's'}',
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // ── ACCEPTED: show the selected pharmacy's audio ──────────
+    // Find audio from REST responses first
+    String? audioUrl;
+    for (final r in accepted) {
+      if (r.audioUrl != null && r.audioUrl!.isNotEmpty) {
+        audioUrl = r.audioUrl;
+        break;
+      }
+    }
+
+    // Fall back to WebSocket / persisted audio
+    if (audioUrl == null) {
+      return _AudioFallback(requestId: widget.broadcast.id);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: GestureDetector(
+        onTap: () => AudioPlayerSheet.show(
+          context,
+          url: audioUrl!,
+          title: 'Pharmacy Voice Message',
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.play_circle_outline,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Play Voice Message',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Fallback audio lookup from WebSocket notifications + SharedPreferences
+/// when the REST API didn't return an audio URL.
+class _AudioFallback extends StatefulWidget {
+  final int requestId;
+  const _AudioFallback({required this.requestId});
+
+  @override
+  State<_AudioFallback> createState() => _AudioFallbackState();
+}
+
+class _AudioFallbackState extends State<_AudioFallback> {
   String? _persistedUrl;
   bool _loading = true;
 
@@ -517,7 +699,7 @@ class _AudioFromNotificationState extends State<_AudioFromNotification> {
   Widget build(BuildContext context) {
     return Consumer<NotificationProvider>(
       builder: (context, provider, _) {
-        // 1) Check in-memory notifications first.
+        // 1) Check in-memory notifications.
         String? audioUrl;
         for (final n in provider.notifications) {
           if (n.type == 'pharmacy_response') {
@@ -526,7 +708,6 @@ class _AudioFromNotificationState extends State<_AudioFromNotification> {
                 nReqId.toString() == widget.requestId.toString()) {
               final raw = n.payload['audio_url'] as String?;
               audioUrl = UrlHelper.resolveMediaUrl(raw);
-              // Also persist so it survives restarts
               if (raw != null && raw.isNotEmpty) {
                 StorageService().saveAudioUrl(widget.requestId, raw);
               }
@@ -535,7 +716,7 @@ class _AudioFromNotificationState extends State<_AudioFromNotification> {
           }
         }
 
-        // 2) Fall back to persisted audio URL from SharedPreferences.
+        // 2) Fall back to persisted audio URL.
         audioUrl ??= _persistedUrl;
 
         if (_loading) return const SizedBox.shrink();

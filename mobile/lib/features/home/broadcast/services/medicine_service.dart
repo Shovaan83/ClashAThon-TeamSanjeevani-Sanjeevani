@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/service/api_service.dart';
 import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model.dart';
-// ignore: unused_import kept for PharmacyResponseType enum
 import 'package:sanjeevani/features/home/broadcast/models/pharmacy_response_model.dart';
 
 /// Service layer for medicine-request broadcast operations.
@@ -12,6 +11,8 @@ import 'package:sanjeevani/features/home/broadcast/models/pharmacy_response_mode
 /// Endpoints used:
 ///   POST / GET  /medicine/request/   — [createRequest], [getRequests]
 ///   POST        /medicine/response/  — [respondToRequest]
+///   GET         /medicine/response/?request_id=  — [getResponsesForRequest]
+///   POST        /medicine/select/    — [selectPharmacy]
 ///
 /// The create endpoint accepts a **multipart** form (image file + fields).
 class MedicineService {
@@ -20,14 +21,6 @@ class MedicineService {
   // ── Customer — create broadcast ───────────────────────────────────────────
 
   /// Creates a medicine request and broadcasts it to nearby pharmacies.
-  ///
-  /// [patientLat]  — current latitude of the patient.
-  /// [patientLng]  — current longitude of the patient.
-  /// [radiusKm]    — search radius in kilometres (default 5).
-  /// [quantity]    — number of medicines needed.
-  /// [imageFile]   — prescription image to upload.
-  ///
-  /// Returns a map with `request_id`, `pharmacies_notified`, `message`.
   Future<Map<String, dynamic>> createRequest({
     required double patientLat,
     required double patientLng,
@@ -73,16 +66,47 @@ class MedicineService {
         .toList();
   }
 
+  // ── Customer — fetch pharmacy offers for a request ────────────────────────
+
+  /// Fetches all pharmacy responses (offers) for a given [requestId].
+  ///
+  /// Calls `GET /medicine/response/?request_id=<id>`.
+  /// Returns a list of [PharmacyResponseModel] with audio URLs, substitute
+  /// info, pharmacy name / location, etc.
+  Future<List<PharmacyResponseModel>> getResponsesForRequest(
+    int requestId,
+  ) async {
+    final raw = await _api.get(
+      ApiEndpoints.medicineResponse,
+      queryParams: {'request_id': requestId},
+      requiresAuth: true,
+    );
+    final body = raw as Map<String, dynamic>;
+    final list = body['responses'] as List<dynamic>;
+    return list
+        .map((e) => PharmacyResponseModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  // ── Customer — select a pharmacy offer ────────────────────────────────────
+
+  /// Patient selects a specific pharmacy response (offer).
+  ///
+  /// Calls `POST /medicine/select/` with `{ "response_id": <id> }`.
+  /// The backend sets the request to ACCEPTED and notifies the chosen pharmacy
+  /// plus any other pharmacies that the request is taken.
+  Future<Map<String, dynamic>> selectPharmacy(int responseId) async {
+    final raw = await _api.post(
+      ApiEndpoints.medicineSelect,
+      body: {'response_id': responseId},
+      requiresAuth: true,
+    );
+    return raw as Map<String, dynamic>;
+  }
+
   // ── Pharmacy — respond ────────────────────────────────────────────────────
 
   /// Pharmacy accepts or rejects a medicine request.
-  ///
-  /// [requestId]    — ID of the [MedicineRequestModel] to respond to.
-  /// [responseType] — `PharmacyResponseType.accepted` or `.rejected`.
-  /// [textMessage]  — optional text message for the patient.
-  /// [audioFile]    — optional recorded voice message (max 1m30s).
-  ///
-  /// Returns a map with `response_id`, `response_type`, `request_status`.
   Future<Map<String, dynamic>> respondToRequest({
     required int requestId,
     required PharmacyResponseType responseType,

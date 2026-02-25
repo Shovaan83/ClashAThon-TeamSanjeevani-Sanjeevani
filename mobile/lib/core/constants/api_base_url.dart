@@ -15,7 +15,7 @@ class ApiBaseUrl {
   }
 
   static bool get _isEmulator {
-    return true;
+    return false;
   }
 
   static String getUrl({bool forceEmulator = false}) {

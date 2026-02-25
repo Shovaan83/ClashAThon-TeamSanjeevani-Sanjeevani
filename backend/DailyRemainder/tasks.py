@@ -5,7 +5,7 @@ from .models import Alarm, AlarmOccurrence, DeviceToken
 from .services.occurance_generator import generate_occurrences_for_alarm
 
 
-@shared_task
+@shared_task(name='DailyRemainder.tasks.generate_daily_occurrences')
 def generate_daily_occurrences():
     """
     Generate alarm occurrences for all active alarms for today.
@@ -22,7 +22,7 @@ def generate_daily_occurrences():
     return f"Generated {total_generated} occurrences for {active_alarms.count()} alarms"
 
 
-@shared_task
+@shared_task(name='DailyRemainder.tasks.check_missed_occurrences')
 def check_missed_occurrences():
     """
     Mark any SCHEDULED occurrences as MISSED if they are 10+ minutes past their
@@ -41,7 +41,7 @@ def check_missed_occurrences():
     return f"Marked {count} occurrences as missed"
 
 
-@shared_task
+@shared_task(name='DailyRemainder.tasks.send_reminder_notifications')
 def send_reminder_notifications():
     """
     Send FCM push notifications for occurrences due in the next 5-10 minutes.

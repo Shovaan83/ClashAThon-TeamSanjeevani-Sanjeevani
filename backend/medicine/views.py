@@ -7,6 +7,12 @@ from medicine.serializers import MedicineRequestSerializer, PharmacyResponseSeri
 from medicine.models import MedicineRequest, PharmacyResponse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from medicine.fcm_helpers import (
+    notify_pharmacies_new_request,
+    notify_patient_pharmacy_response,
+    notify_pharmacy_selected,
+    notify_pharmacies_request_taken,
+)
 
 
 class MedicineRequestApiView(APIView):
@@ -58,6 +64,14 @@ class MedicineRequestApiView(APIView):
                 )
             print("=== Broadcast complete ===\n")
             
+            # ── FCM push (works even when app is killed) ──────────
+            notify_pharmacies_new_request(
+                nearby_pharmacies=nearby_pharmacies,
+                request_id=medicine_request.id,
+                patient_name=request.user.name,
+                quantity=medicine_request.quantity,
+            )
+
             return Response({
                 'message': f'Medicine request sent to {len(nearby_pharmacies)} nearby pharmacies',
                 'request_id': medicine_request.id,
@@ -220,6 +234,16 @@ class PharmacyResponseApiView(APIView):
                     'timestamp': pharmacy_response.responded_at.isoformat()
                 }
             )
+
+            # ── FCM push to patient (works even when app is killed) ──
+            notify_patient_pharmacy_response(
+                patient_user=medicine_request.patient,
+                request_id=int(request_id),
+                pharmacy_name=request.user.name,
+                response_type=response_type,
+                response_id=pharmacy_response.id,
+                audio_url=audio_url,
+            )
             
             return Response({
                 'message': 'Response sent successfully',
@@ -354,6 +378,18 @@ class PatientSelectPharmacyView(APIView):
                         'message': 'This request has been accepted by another pharmacy',
                     }
                 )
+
+        # ── FCM push (works even when app is killed) ──────────────
+        notify_pharmacy_selected(
+            pharmacy_user=selected_pharmacy.user,
+            request_id=medicine_request.id,
+            patient_name=request.user.name,
+        )
+        notify_pharmacies_request_taken(
+            nearby_pharmacies=nearby_pharmacies,
+            selected_pharmacy_id=selected_pharmacy.id,
+            request_id=medicine_request.id,
+        )
 
         return Response({
             'message': f'You have selected {selected_pharmacy.user.name}',
