@@ -1,5 +1,10 @@
 from django.db import models
-from accounts.models import CustomUser,Pharmacy
+
+# Create your models here.
+
+from django.db import models
+from accounts.models import CustomUser
+from pharmacy.models import Pharmacy
 
 # Create your models here.
 class PingRequest(models.Model):

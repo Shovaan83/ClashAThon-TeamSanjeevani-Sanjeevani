@@ -11,6 +11,8 @@ from django.http import StreamingHttpResponse
 
 
 event_queue = queue.Queue()
+connected_pharmacies = {}
+
 
 
 # yeslae changes haru herna ka lagi

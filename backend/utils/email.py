@@ -70,3 +70,4 @@ def send_email(to, subject, body):
 
     email.attach_alternative(html_content, "text/html")
     email.send()
+    print("Is email running")

@@ -37,6 +37,7 @@ class RegisterUserEmail(ResponseMixin,APIView):
         # Send email directly (synchronous) - more reliable for development
         try:
             send_email(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
+            
         except Exception as e:
             return Response({'error': f'Failed to send OTP: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -59,27 +60,53 @@ class VerifyOtpEmail(ResponseMixin,APIView):
         if (db_otp!=otp):
             return self.validation_error_response(errors="",message="Otp doesnt match")
         
+        # Mark OTP as verified
+        check_email.is_verified = True
+        check_email.save()
+        
         return self.success_response(data={
-            email:email,
-            otp:otp
+            'email':email,
+            'otp':otp
         },message="Otp verified successfully")
 
 
 
 
 class LoginView(ResponseMixin,APIView):
+    """
+    Unified login for all user types (Customer, Pharmacy, Admin)
+    Returns user data with role for frontend routing
+    """
     def post(self,request):
         email = request.data.get('email')
         password = request.data.get('password')
+        
+        if not email or not password:
+            return self.validation_error_response(
+                message="Email and password are required"
+            )
 
         exist_email = CustomUser.objects.filter(email=email).first()
         if not exist_email:
             return self.unauthorized_response(message="Email not found")
         
-        user_ok = authenticate(username=exist_email,password=password)
+        user_ok = authenticate(username=email, password=password)
         if user_ok is None:
-            return self.unauthorized_response(message="Password not correct")
+            return self.unauthorized_response(message="Incorrect password")
         
         token = get_tokens_for_user(user_ok)
-        return self.success_response(data=token,message="Logged in successfully")
+        
+        return self.success_response(
+            data={
+                'user': {
+                    'id': user_ok.id,
+                    'email': user_ok.email,
+                    'name': user_ok.name,
+                    'phone_number': user_ok.phone_number,
+                    'role': user_ok.role  # CUSTOMER, PHARMACY, or ADMIN
+                },
+                'tokens': token
+            },
+            message="Login successful"
+        )
     
