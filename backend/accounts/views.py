@@ -46,6 +46,7 @@ class RegisterUserEmail(ResponseMixin, APIView):
 
     def post(self, request):
         email = request.data.get('email')
+        print("This is email",email)
         if not email:
             return self.validation_error_response(message="Please input email", errors="")
         
