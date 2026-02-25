@@ -198,7 +198,7 @@ class PharmacyResponseApiView(APIView):
             audio_url = None
             if pharmacy_response.audio:
                 print(f"Audio file uploaded: {pharmacy_response.audio.url}")
-                audio_url = (pharmacy_response.audio.url)
+                audio_url = request.build_absolute_uri(pharmacy_response.audio.url)
             
             async_to_sync(channel_layer.group_send)(
                 f"user_{medicine_request.patient.id}",
@@ -239,22 +239,42 @@ class PharmacyResponseApiView(APIView):
 
     def get(self, request):
         """
-        Get all responses for the authenticated pharmacy
+        Pharmacy: GET /medicine/response/  → all responses by this pharmacy
+        Patient:  GET /medicine/response/?request_id=<id>  → all pharmacy offers for that request
         """
-        if not hasattr(request.user, 'pharmacy'):
+        if hasattr(request.user, 'pharmacy'):
+            pharmacy = request.user.pharmacy
+            responses = PharmacyResponse.objects.filter(
+                pharmacy=pharmacy
+            ).select_related('request__patient', 'pharmacy__user').order_by('-responded_at')
+
+            serializer = PharmacyResponseSerializer(responses, many=True, context={'request': request})
             return Response({
-                'error': 'Only pharmacies can access this endpoint'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        pharmacy = request.user.pharmacy
+                'count': responses.count(),
+                'responses': serializer.data
+            }, status=status.HTTP_200_OK)
+
+        # Patient — return all pharmacy offers for their own request
+        request_id = request.query_params.get('request_id')
+        if not request_id:
+            return Response(
+                {'error': 'request_id query param is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            medicine_request = MedicineRequest.objects.get(id=request_id, patient=request.user)
+        except MedicineRequest.DoesNotExist:
+            return Response({'error': 'Request not found'}, status=status.HTTP_404_NOT_FOUND)
+
         responses = PharmacyResponse.objects.filter(
-            pharmacy=pharmacy
-        ).select_related('request__patient').order_by('-responded_at')
-        
-        serializer = PharmacyResponseSerializer(responses, many=True)
+            request=medicine_request
+        ).select_related('pharmacy__user').order_by('responded_at')
+
+        serializer = PharmacyResponseSerializer(responses, many=True, context={'request': request})
         return Response({
             'count': responses.count(),
-            'responses': serializer.data
+            'responses': serializer.data,
         }, status=status.HTTP_200_OK)
 
 
