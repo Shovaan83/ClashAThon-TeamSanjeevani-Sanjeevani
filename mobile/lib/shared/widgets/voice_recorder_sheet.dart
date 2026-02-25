@@ -14,15 +14,6 @@ const _kMaxDuration = Duration(minutes: 1, seconds: 30);
 ///
 /// Returns the recorded [File] via `Navigator.pop<File>`, or `null` if the
 /// user cancels.
-///
-/// Usage:
-/// ```dart
-/// final file = await showModalBottomSheet<File>(
-///   context: context,
-///   isScrollControlled: true,
-///   builder: (_) => const VoiceRecorderSheet(),
-/// );
-/// ```
 class VoiceRecorderSheet extends StatefulWidget {
   const VoiceRecorderSheet({super.key});
 
@@ -30,12 +21,13 @@ class VoiceRecorderSheet extends StatefulWidget {
   State<VoiceRecorderSheet> createState() => _VoiceRecorderSheetState();
 }
 
+enum _RecordState { idle, recording, paused, done }
+
 class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
   final AudioRecorder _recorder = AudioRecorder();
   Timer? _timer;
 
-  bool _isRecording = false;
-  bool _hasRecording = false;
+  _RecordState _state = _RecordState.idle;
   int _elapsed = 0; // seconds
   String? _filePath;
 
@@ -69,12 +61,16 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
     );
 
     setState(() {
-      _isRecording = true;
-      _hasRecording = false;
+      _state = _RecordState.recording;
       _elapsed = 0;
       _filePath = path;
     });
 
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_elapsed >= _kMaxDuration.inSeconds) {
         _stopRecording();
@@ -84,12 +80,23 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
     });
   }
 
+  Future<void> _pauseRecording() async {
+    _timer?.cancel();
+    await _recorder.pause();
+    setState(() => _state = _RecordState.paused);
+  }
+
+  Future<void> _resumeRecording() async {
+    await _recorder.resume();
+    setState(() => _state = _RecordState.recording);
+    _startTimer();
+  }
+
   Future<void> _stopRecording() async {
     _timer?.cancel();
     final path = await _recorder.stop();
     setState(() {
-      _isRecording = false;
-      _hasRecording = path != null;
+      _state = path != null ? _RecordState.done : _RecordState.idle;
       if (path != null) _filePath = path;
     });
   }
@@ -165,10 +172,24 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
               style: TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.w300,
-                color: _isRecording ? AppColors.error : AppColors.textPrimary,
+                color: _state == _RecordState.recording
+                    ? AppColors.error
+                    : _state == _RecordState.paused
+                    ? AppColors.accent
+                    : AppColors.textPrimary,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
+            if (_state == _RecordState.paused)
+              const Text(
+                'PAUSED',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.accent,
+                  letterSpacing: 1.5,
+                ),
+              ),
             const SizedBox(height: 8),
 
             // Progress bar
@@ -179,97 +200,154 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
                 minHeight: 4,
                 backgroundColor: Colors.grey.shade200,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  _isRecording ? AppColors.error : AppColors.primary,
+                  _state == _RecordState.recording
+                      ? AppColors.error
+                      : AppColors.primary,
                 ),
               ),
             ),
             const SizedBox(height: 28),
 
-            // Controls
-            if (!_hasRecording)
-              // Record / stop button
-              GestureDetector(
-                onTap: _isRecording ? _stopRecording : _startRecording,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: _isRecording ? AppColors.error : AppColors.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            (_isRecording ? AppColors.error : AppColors.primary)
-                                .withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _isRecording ? Icons.stop_rounded : Icons.mic,
-                    color: Colors.white,
-                    size: 36,
-                  ),
-                ),
-              )
-            else
-              // Discard / Confirm
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Discard
-                  OutlinedButton.icon(
-                    onPressed: _discard,
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    label: const Text('Discard'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Confirm
-                  ElevatedButton.icon(
-                    onPressed: _confirm,
-                    icon: const Icon(Icons.check, size: 20),
-                    label: const Text('Send'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            // ── Controls ────────────────────────────────────
+            _buildControls(),
 
             const SizedBox(height: 12),
-
-            // Cancel text button (always visible when not confirmed)
-            if (!_hasRecording)
-              TextButton(
-                onPressed: _discard,
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildControls() {
+    switch (_state) {
+      // ── Idle: big mic button + cancel ──
+      case _RecordState.idle:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _circleButton(
+              icon: Icons.mic,
+              color: AppColors.primary,
+              onTap: _startRecording,
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: _discard,
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+          ],
+        );
+
+      // ── Recording: pause + stop buttons ──
+      case _RecordState.recording:
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _circleButton(
+              icon: Icons.pause_rounded,
+              color: AppColors.accent,
+              onTap: _pauseRecording,
+              size: 56,
+            ),
+            const SizedBox(width: 28),
+            _circleButton(
+              icon: Icons.stop_rounded,
+              color: AppColors.error,
+              onTap: _stopRecording,
+            ),
+          ],
+        );
+
+      // ── Paused: resume + stop buttons ──
+      case _RecordState.paused:
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _circleButton(
+              icon: Icons.play_arrow_rounded,
+              color: AppColors.primary,
+              onTap: _resumeRecording,
+              size: 56,
+            ),
+            const SizedBox(width: 28),
+            _circleButton(
+              icon: Icons.stop_rounded,
+              color: AppColors.error,
+              onTap: _stopRecording,
+            ),
+          ],
+        );
+
+      // ── Done: discard / send buttons ──
+      case _RecordState.done:
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _discard,
+              icon: const Icon(Icons.delete_outline, size: 20),
+              label: const Text('Discard'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: _confirm,
+              icon: const Icon(Icons.check, size: 20),
+              label: const Text('Send'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+            ),
+          ],
+        );
+    }
+  }
+
+  /// Reusable circle icon button.
+  Widget _circleButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    double size = 72,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: Colors.white, size: size * 0.5),
       ),
     );
   }
