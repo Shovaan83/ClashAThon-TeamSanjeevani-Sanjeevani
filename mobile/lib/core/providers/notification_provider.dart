@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sanjeevani/core/service/websocket_service.dart';
 import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model.dart';
+import 'package:sanjeevani/features/home/broadcast/models/pharmacy_response_model.dart';
 import 'package:sanjeevani/features/home/broadcast/services/medicine_service.dart';
 
 /// In-app notification item generated from WebSocket messages or API data.
@@ -43,6 +44,7 @@ class NotificationProvider extends ChangeNotifier {
   final MedicineService _medicineService = MedicineService();
   final StorageService _storage = StorageService();
 
+  // ignore: unused_field — stored for future role-based logic
   String? _role; // 'CUSTOMER' or 'PHARMACY'
   bool _isLoading = false;
   String? _error;

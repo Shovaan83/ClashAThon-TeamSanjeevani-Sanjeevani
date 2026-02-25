@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
+import 'package:sanjeevani/core/providers/notification_provider.dart';
 import 'package:sanjeevani/features/home/screens/add_screen.dart';
 import 'package:sanjeevani/features/home/screens/notification_screen.dart';
 import 'package:sanjeevani/features/home/screens/patient_home_content.dart';
@@ -43,6 +45,14 @@ class _MainScreenState extends State<MainScreen> {
       // 4 – Profile
       const ProfileScreen(),
     ];
+
+    // Initialise the notification provider for customer role.
+    // Pharmacy role init is handled inside PharmacyHomeContent.
+    if (widget.role == UserRole.patient) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<NotificationProvider>().init();
+      });
+    }
   }
 
   String get _appBarTitle {
@@ -84,9 +94,12 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       body: SafeArea(child: _tabs[_currentIndex]),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+      bottomNavigationBar: Consumer<NotificationProvider>(
+        builder: (context, provider, _) => AppBottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+          notificationBadge: provider.unreadCount,
+        ),
       ),
     );
   }
