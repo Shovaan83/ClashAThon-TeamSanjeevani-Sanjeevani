@@ -7,6 +7,7 @@ import 'package:sanjeevani/features/auth/screens/signup_details_screen.dart';
 import 'package:sanjeevani/features/static/splash_screen.dart';
 import 'package:sanjeevani/features/home/screens/main_screen.dart';
 import 'package:sanjeevani/features/chatbot/screens/chatbot_screen.dart';
+import 'package:sanjeevani/features/daily_rem/screens/daily_reminders_screen.dart';
 import 'package:sanjeevani/shared/widgets/role_selector.dart';
 
 class AppRouter {
@@ -40,6 +41,9 @@ class AppRouter {
 
       case AppRoutes.chatbot:
         return MaterialPageRoute(builder: (_) => const ChatbotScreen());
+
+      case AppRoutes.dailyReminders:
+        return MaterialPageRoute(builder: (_) => const DailyRemindersScreen());
 
       default:
         return MaterialPageRoute(

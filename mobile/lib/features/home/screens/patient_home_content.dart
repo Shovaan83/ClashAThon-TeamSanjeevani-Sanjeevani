@@ -495,6 +495,7 @@ class _AudioFromNotification extends StatefulWidget {
 
 class _AudioFromNotificationState extends State<_AudioFromNotification> {
   String? _persistedUrl;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -504,8 +505,11 @@ class _AudioFromNotificationState extends State<_AudioFromNotification> {
 
   Future<void> _loadPersistedUrl() async {
     final raw = await StorageService().getAudioUrl(widget.requestId);
-    if (raw != null && mounted) {
-      setState(() => _persistedUrl = UrlHelper.resolveMediaUrl(raw));
+    if (mounted) {
+      setState(() {
+        _persistedUrl = raw != null ? UrlHelper.resolveMediaUrl(raw) : null;
+        _loading = false;
+      });
     }
   }
 
@@ -522,6 +526,10 @@ class _AudioFromNotificationState extends State<_AudioFromNotification> {
                 nReqId.toString() == widget.requestId.toString()) {
               final raw = n.payload['audio_url'] as String?;
               audioUrl = UrlHelper.resolveMediaUrl(raw);
+              // Also persist so it survives restarts
+              if (raw != null && raw.isNotEmpty) {
+                StorageService().saveAudioUrl(widget.requestId, raw);
+              }
               break;
             }
           }
@@ -530,7 +538,32 @@ class _AudioFromNotificationState extends State<_AudioFromNotification> {
         // 2) Fall back to persisted audio URL from SharedPreferences.
         audioUrl ??= _persistedUrl;
 
-        if (audioUrl == null) return const SizedBox.shrink();
+        if (_loading) return const SizedBox.shrink();
+
+        if (audioUrl == null) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.mic_none,
+                  size: 16,
+                  color: AppColors.textSecondary.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Voice message will appear here',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary.withValues(alpha: 0.6),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
 
         return Padding(
           padding: const EdgeInsets.only(top: 10),

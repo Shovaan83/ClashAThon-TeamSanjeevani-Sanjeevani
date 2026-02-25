@@ -217,3 +217,7 @@ __marimo__/
 
 
 db.sqlite3
+firebase-credentials.json
+
+celerybeat-schedule-shm
+celerybeat-schedule-wal

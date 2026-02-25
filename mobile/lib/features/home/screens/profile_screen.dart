@@ -666,6 +666,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 16),
 
+            // ── Daily Reminders (patients only) ────────────
+            if (!_isPharmacy)
+              _SectionCard(
+                icon: Icons.alarm,
+                title: 'Daily Reminders',
+                child: Column(
+                  children: [
+                    const Text(
+                      'Set medication reminders to never miss a dose.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          AppRoutes.dailyReminders,
+                        ),
+                        icon: const Icon(Icons.alarm_add, size: 18),
+                        label: const Text('Manage Reminders'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            if (!_isPharmacy) const SizedBox(height: 16),
+
             // ── Security & notifications ───────────────────
             _SectionCard(
               icon: Icons.security_outlined,

@@ -60,4 +60,35 @@ class ApiEndpoints {
   /// PUT  /api/profileprofile/{pk}/update/  — update pharmacy extended profile
   static String accountsProfileUpdate(int pk) =>
       'api/profileprofile/$pk/update/';
+
+  // ── Daily Reminder ───────────────────────────────────────
+  /// GET / POST  /api/daily-reminder/medicines/
+  static const String dailyMedicines = 'api/daily-reminder/medicines/';
+
+  /// GET / PUT / DELETE  /api/daily-reminder/medicines/{pk}/
+  static String dailyMedicineDetail(int pk) =>
+      'api/daily-reminder/medicines/$pk/';
+
+  /// GET / POST  /api/daily-reminder/alarms/
+  static const String dailyAlarms = 'api/daily-reminder/alarms/';
+
+  /// GET / PUT / DELETE  /api/daily-reminder/alarms/{pk}/
+  static String dailyAlarmDetail(int pk) => 'api/daily-reminder/alarms/$pk/';
+
+  /// GET  /api/daily-reminder/occurrences/?date_from=&date_to=&status=
+  static const String dailyOccurrences = 'api/daily-reminder/occurrences/';
+
+  /// PATCH  /api/daily-reminder/occurrences/{pk}/
+  static String dailyOccurrenceDetail(int pk) =>
+      'api/daily-reminder/occurrences/$pk/';
+
+  /// POST  /api/daily-reminder/device-tokens/
+  static const String dailyDeviceTokens = 'api/daily-reminder/device-tokens/';
+
+  /// DELETE  /api/daily-reminder/device-tokens/{pk}/
+  static String dailyDeviceTokenDetail(int pk) =>
+      'api/daily-reminder/device-tokens/$pk/';
+
+  /// GET  /api/daily-reminder/dashboard/
+  static const String dailyDashboard = 'api/daily-reminder/dashboard/';
 }
