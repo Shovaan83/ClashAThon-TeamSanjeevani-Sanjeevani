@@ -60,3 +60,13 @@ body {
 .animate-radar-beam-delay-2 {
   animation: radar-beam 2.4s ease-out 1.6s infinite;
 }
+
+/* Scalloped mask — used for prescription thumbnail in IncomingRequestModal */
+.scalloped-mask {
+  mask-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 0C54.1 12.5 66.7 12.5 70.8 0C75 12.5 87.5 12.5 91.7 0C100 0 100 8.3 100 16.7C87.5 20.8 87.5 33.3 100 37.5C87.5 41.7 87.5 54.2 100 58.3C87.5 62.5 87.5 75 100 79.2C100 87.5 100 100 91.7 100C87.5 87.5 75 87.5 70.8 100C66.7 87.5 54.1 87.5 50 100C45.9 87.5 33.3 87.5 29.2 100C25 87.5 12.5 87.5 8.3 100C0 100 0 91.7 0 83.3C12.5 79.2 12.5 66.7 0 62.5C12.5 58.3 12.5 45.8 0 41.7C12.5 37.5 12.5 25 0 20.8C0 12.5 0 0 8.3 0C12.5 12.5 25 12.5 29.2 0C33.3 12.5 45.9 12.5 50 0Z" fill="black"/></svg>');
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 0C54.1 12.5 66.7 12.5 70.8 0C75 12.5 87.5 12.5 91.7 0C100 0 100 8.3 100 16.7C87.5 20.8 87.5 33.3 100 37.5C87.5 41.7 87.5 54.2 100 58.3C87.5 62.5 87.5 75 100 79.2C100 87.5 100 100 91.7 100C87.5 87.5 75 87.5 70.8 100C66.7 87.5 54.1 87.5 50 100C45.9 87.5 33.3 87.5 29.2 100C25 87.5 12.5 87.5 8.3 100C0 100 0 91.7 0 83.3C12.5 79.2 12.5 66.7 0 62.5C12.5 58.3 12.5 45.8 0 41.7C12.5 37.5 12.5 25 0 20.8C0 12.5 0 0 8.3 0C12.5 12.5 25 12.5 29.2 0C33.3 12.5 45.9 12.5 50 0Z" fill="black"/></svg>');
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+}

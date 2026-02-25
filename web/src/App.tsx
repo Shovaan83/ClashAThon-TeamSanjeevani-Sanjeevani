@@ -11,6 +11,8 @@ import SearchPage from "./features/home/pages/SearchPage";
 import DevTools from "./components/DevTools";
 import { useAuthStore } from "./store/useAuthStore";
 import MedicineRequestHistory from "./features/home/MedicineRequestHistory";
+import IncomingRequestModal from "./features/home/components/IncomingRequestModal";
+import { useRequestStore } from "./store/useRequestStore";
 
 
 function DashboardRedirect() {
@@ -21,6 +23,8 @@ function DashboardRedirect() {
 }
 
 export default function App() {
+  const { isModalOpen } = useRequestStore();
+
   return (
     <BrowserRouter>
       <Routes>
@@ -56,6 +60,7 @@ export default function App() {
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
       <DevTools />
+      {isModalOpen && <IncomingRequestModal />}
     </BrowserRouter>
   );
 }

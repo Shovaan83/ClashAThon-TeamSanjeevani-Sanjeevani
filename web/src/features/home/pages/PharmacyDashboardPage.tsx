@@ -6,6 +6,7 @@ import IncomingRequestCard from '../components/IncomingRequestCard';
 import FomoSummary from '../components/FomoSummary';
 import PharmacySidebar from '../components/PharmacySidebar';
 
+
 export default function PharmacyDashboardPage() {
   return (
     <div className="flex min-h-screen w-full flex-col overflow-x-hidden bg-[#FAFAF9]">

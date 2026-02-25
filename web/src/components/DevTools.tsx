@@ -1,4 +1,6 @@
 import { useAuthStore } from '../store/useAuthStore';
+import { useRequestStore } from '../store/useRequestStore';
+import { type IncomingRequest } from '../store/useRequestStore';
 
 const MOCK_PATIENT = {
   id: 'dev-patient-1',
@@ -16,10 +18,24 @@ const MOCK_PHARMACY = {
   isVerified: true,
 };
 
+const MOCK_INCOMING_REQUEST: IncomingRequest = {
+  id: 'mock-req-8821-AS',
+  patientName: 'Arjun Sharma',
+  patientId: '#8821-AS',
+  location: 'New Delhi, IN',
+  prescriptionImageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCC3_EME8tIRHoTHF-77oeFOGcZ8pcCRcO6-F4O0MdtGbFzcNjtUtayHY7-M8ml04qYmkWRk84ej2pZmnqKYzDP0111RLcxwCSJLVbilJEEQl_UuAugYVteFT9LnvMv9EwJYYHDr-Awss2u7nd-0qKn3L9HB_U__PWV9BxCfDcZzceBc-vkVNjXBVwIrE2rnGEh9YQpzNVrf2jjjB5xUNvFm1cmUd4v55xtJl0HKftNqEoPA57YHNXk92zvk2_JtvM9Suq9QkpCvuI',
+  medicines: ['Amoxicillin 500mg', 'Paracetamol 650mg'],
+  additionalMedicinesCount: 2,
+  isUrgent: true,
+  doctorNote: 'Please deliver by 6 PM today. Patient has high fever and needs the antibiotics immediately.',
+  timestamp: Date.now(),
+};
+
 export default function DevTools() {
   if (!import.meta.env.DEV) return null;
 
   const { login, logout, user, isAuthenticated } = useAuthStore();
+  const { showRequest } = useRequestStore();
 
   const statusLabel = !isAuthenticated
     ? 'Logged Out'
@@ -72,6 +88,14 @@ export default function DevTools() {
         <button onClick={logout} style={btnStyle('#dc2626')}>
           Logout
         </button>
+        {user?.role === 'pharmacy' && (
+          <button
+            onClick={() => showRequest({ ...MOCK_INCOMING_REQUEST, timestamp: Date.now() })}
+            style={btnStyle('#a855f7')}
+          >
+            Simulate Incoming Request
+          </button>
+        )}
       </div>
     </div>
   );
