@@ -1,7 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 
-enum UserRole { patient, pharmacy }
+enum UserRole { patient, pharmacy, admin }
+
+/// Helpers to convert between backend role strings and [UserRole].
+extension UserRoleX on UserRole {
+  /// Map a backend role string ("CUSTOMER", "PHARMACY", "ADMIN") to enum.
+  static UserRole fromBackend(String role) {
+    switch (role.toUpperCase()) {
+      case 'PHARMACY':
+        return UserRole.pharmacy;
+      case 'ADMIN':
+        return UserRole.admin;
+      default:
+        return UserRole.patient;
+    }
+  }
+
+  /// Convert enum to the backend string representation.
+  String toBackend() {
+    switch (this) {
+      case UserRole.patient:
+        return 'CUSTOMER';
+      case UserRole.pharmacy:
+        return 'PHARMACY';
+      case UserRole.admin:
+        return 'ADMIN';
+    }
+  }
+}
 
 class RoleSelector extends StatelessWidget {
   final UserRole selectedRole;

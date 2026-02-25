@@ -15,17 +15,37 @@ from utils.email import send_email
 from utils.otp import generate_otp
 from rest_framework.response import Response
 from rest_framework import status
+import threading
+import logging
+
 
 from .models import Otp
 
-class RegisterUserEmail(ResponseMixin,APIView):
-    def post(self,request):
+logger = logging.getLogger(__name__)
+
+
+def send_email_async(email, subject, body):
+    """
+    Send email in a separate thread to avoid blocking the request.
+    This is a fallback when Celery is not running.
+    """
+    try:
+        send_email(email, subject, body)
+        logger.info(f"Email sent successfully to {email}")
+    except Exception as e:
+        logger.error(f"Failed to send email to {email}: {str(e)}")
+
+
+class RegisterUserEmail(ResponseMixin, APIView):
+    def post(self, request):
         email = request.data.get('email')
         if not email:
-            return self.validation_error_response(message="Please input email",errors="")
+            return self.validation_error_response(message="Please input email", errors="")
+        
         check_email = CustomUser.objects.filter(email=email).first()
         if check_email:
             return self.validation_error_response(message="Email already exist")
+        
         otp = generate_otp()
         
         # Update existing OTP or create new one
@@ -34,11 +54,30 @@ class RegisterUserEmail(ResponseMixin,APIView):
             defaults={'otp': otp, 'is_verified': False}
         )
 
-        # Send email directly (synchronous) - more reliable for development
+        email_body = f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes."
+        email_subject = "Your OTP"
+        
+        # Try Celery first (async), fallback to threaded email sending
+        celery_available = False
         try:
-            send_email(email, "Your OTP", f"Your OTP code is: {otp}. Please use this to verify your email address. It will expire in 10 minutes.")
-        except Exception as e:
-            return Response({'error': f'Failed to send OTP: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Check if Celery is available and broker is connected
+            result = send_email_task.delay(email, email_subject, email_body)
+            # Give it a moment to see if task was accepted
+            celery_available = True
+            logger.info(f"Email task queued via Celery for {email}")
+        except Exception as celery_exc:
+            logger.warning(f"Celery not available, falling back to threaded email: {str(celery_exc)}")
+            celery_available = False
+        
+        if not celery_available:
+            # Use threading to send email in background (non-blocking)
+            email_thread = threading.Thread(
+                target=send_email_async,
+                args=(email, email_subject, email_body)
+            )
+            email_thread.daemon = True
+            email_thread.start()
+            logger.info(f"Email thread started for {email}")
 
         return Response({'message': 'OTP sent successfully.'}, status=status.HTTP_200_OK)
     
@@ -59,27 +98,53 @@ class VerifyOtpEmail(ResponseMixin,APIView):
         if (db_otp!=otp):
             return self.validation_error_response(errors="",message="Otp doesnt match")
         
+        # Mark OTP as verified
+        check_email.is_verified = True
+        check_email.save()
+        
         return self.success_response(data={
-            email:email,
-            otp:otp
+            'email':email,
+            'otp':otp
         },message="Otp verified successfully")
 
 
 
 
 class LoginView(ResponseMixin,APIView):
+    """
+    Unified login for all user types (Customer, Pharmacy, Admin)
+    Returns user data with role for frontend routing
+    """
     def post(self,request):
-        email = request.get('email')
-        password = request.get('password')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return self.validation_error_response(
+                message="Email and password are required"
+            )
 
         exist_email = CustomUser.objects.filter(email=email).first()
         if not exist_email:
-            return ResponseMixin.unauthorized_response(message="Email not found")
+            return self.unauthorized_response(message="Email not found")
         
-        user_ok = authenticate(username=exist_email,password=password)
+        user_ok = authenticate(username=email, password=password)
         if user_ok is None:
-            return ResponseMixin.unauthorized_response(message="Password not correct")
+            return self.unauthorized_response(message="Incorrect password")
         
         token = get_tokens_for_user(user_ok)
-        return ResponseMixin.success_response(data=token,message="Logged in successfully")
+        
+        return self.success_response(
+            data={
+                'user': {
+                    'id': user_ok.id,
+                    'email': user_ok.email,
+                    'name': user_ok.name,
+                    'phone_number': user_ok.phone_number,
+                    'role': user_ok.role  # CUSTOMER, PHARMACY, or ADMIN
+                },
+                'tokens': token
+            },
+            message="Login successful"
+        )
     

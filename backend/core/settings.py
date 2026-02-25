@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 from dotenv import dotenv_values
 
@@ -33,12 +34,14 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'corsheaders',
     'rest_framework',
     'drf_yasg',
@@ -47,6 +50,9 @@ INSTALLED_APPS = [
     'celery',
     'django_celery_results',
     'pharmacy',
+    'medicine',
+    'customer',
+    'accountsprofile',
 ]
 
 MIDDLEWARE = [
@@ -79,7 +85,23 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = 'core.asgi.application'
 
+# Channel layers configuration for WebSockets
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+}
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -139,27 +161,38 @@ REST_FRAMEWORK = {
 }
 
 
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  
-
 EMAIL_HOST = 'smtp.gmail.com'  
-
 
 EMAIL_USE_TLS = True
 
 EMAIL_PORT = 587
 
 EMAIL_HOST_USER = config.get("EMAIL_HOST_USER")
-
+ 
 EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD")
 
+# Email timeout settings (in seconds)
+EMAIL_TIMEOUT = 30
+
+# Email Backend Configuration
+# For development/debugging when SMTP is blocked, set USE_CONSOLE_EMAIL=true in .env
+USE_CONSOLE_EMAIL = config.get("USE_CONSOLE_EMAIL", "false").lower() == "true"
+
+if USE_CONSOLE_EMAIL:
+    # Console backend - prints emails to console (useful for development)
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # SMTP backend - sends real emails
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
 # Celery Configuration
-CELERY_BROKER_URL = 'memory://'  # Simple in-memory broker for development
-CELERY_RESULT_BACKEND = 'django-db://'
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'  # Use Redis as broker (recommended)
+CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_ALWAYS_EAGER = False  # Set to True for debugging without Celery worker
 
 
 CORS_ALLOWED_ORIGINS = [
@@ -169,3 +202,6 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 
+# Media files (uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sanjeevani/config/exception/api_exception.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
-import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
-import 'package:sanjeevani/core/service/api_service.dart';
+import 'package:sanjeevani/features/auth/services/auth_service.dart';
 import 'package:sanjeevani/shared/utils/validators/validators.dart';
 import 'package:sanjeevani/shared/widgets/app_button.dart';
 import 'package:sanjeevani/shared/widgets/app_text_field.dart';
@@ -27,6 +26,7 @@ class _SignupDetailsScreenState extends State<SignupDetailsScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _authService = AuthService();
 
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
@@ -80,44 +80,56 @@ class _SignupDetailsScreenState extends State<SignupDetailsScreen> {
 
     try {
       if (_role == UserRole.pharmacy) {
-        // Pharmacy registration with nested user object + location
-        await ApiService().post(
-          ApiEndpoints.registerPharmacy,
-          body: {
-            'user': {
-              'email': _email,
-              'password': _passwordController.text,
-              'name': _nameController.text.trim(),
-              'phone_number': _phoneController.text.trim(),
-            },
-            if (_hasLocation) 'lat': _latitude,
-            if (_hasLocation) 'lng': _longitude,
-          },
+        // Pharmacy registration — no tokens returned, redirect to login
+        await _authService.registerPharmacy(
+          email: _email,
+          name: _nameController.text.trim(),
+          phoneNumber: _phoneController.text.trim(),
+          password: _passwordController.text,
+          lat: _latitude!,
+          lng: _longitude!,
         );
-      } else {
-        // Patient / other role registration
-        await ApiService().post(
-          ApiEndpoints.register,
-          body: {
-            'email': _email,
-            'password': _passwordController.text,
-            'name': _nameController.text.trim(),
-            'phone_number': _phoneController.text.trim(),
-          },
-        );
-      }
 
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.loginScreen,
-          (route) => false,
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.loginScreen,
+            (route) => false,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pharmacy registered! Please log in.'),
+            ),
+          );
+        }
+      } else {
+        // Patient registration — returns tokens, auto-login
+        final authResponse = await _authService.registerCustomer(
+          email: _email,
+          name: _nameController.text.trim(),
+          phoneNumber: _phoneController.text.trim(),
+          password: _passwordController.text,
+          confirmPassword: _confirmPasswordController.text,
         );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully! Please log in.'),
-          ),
-        );
+
+        await _authService.persistSession(authResponse);
+
+        final role = UserRoleX.fromBackend(authResponse.user.role);
+
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.home,
+            (route) => false,
+            arguments: {'role': role},
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Welcome to Sanjeevani!'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
       }
     } on ApiException catch (e) {
       if (mounted) {

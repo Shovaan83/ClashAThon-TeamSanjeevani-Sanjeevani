@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include  
+from django.conf import settings
+from django.conf.urls.static import static
 
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -22,12 +24,25 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    path("", include("accounts.urls")),
-    path("", include("pharmacy.urls")),
+    # Customer app - all customer-related endpoints
+    path('customer/', include('customer.urls')),
+    
+    # Legacy/shared accounts endpoints (can be removed later)
+    path('', include('accounts.urls')),
+    
+    # Pharmacy endpoints
+    path('', include('pharmacy.urls')),
+    path('api/profile',include('accountsprofile.urls')),
+    
+    # Medicine requests
+    path('medicine/', include('medicine.urls')),
 
-    # swagger docs
+    # Swagger docs
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    
 ]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
