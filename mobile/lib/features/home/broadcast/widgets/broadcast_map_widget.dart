@@ -12,10 +12,14 @@ class BroadcastMapWidget extends StatelessWidget {
   /// Broadcast radius in kilometres.
   final double radiusKm;
 
+  /// Optional controller to programmatically move the map (e.g. after search).
+  final MapController? mapController;
+
   const BroadcastMapWidget({
     super.key,
     required this.center,
     required this.radiusKm,
+    this.mapController,
   });
 
   @override
@@ -25,6 +29,7 @@ class BroadcastMapWidget extends StatelessWidget {
     }
 
     return FlutterMap(
+      mapController: mapController,
       options: MapOptions(
         initialCenter: center!,
         initialZoom: _zoomForRadius(radiusKm),

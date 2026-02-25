@@ -45,7 +45,9 @@ class _MainScreenState extends State<MainScreen> {
       ];
     } else {
       _tabs = [
-        const PatientHomeContent(), // 0 – Home
+        PatientHomeContent(
+          onSwitchTab: (index) => setState(() => _currentIndex = index),
+        ), // 0 – Home
         const SearchScreen(), // 1 – Search
         const AddScreen(), // 2 – Broadcast
         const NotificationScreen(), // 3 – Notifications

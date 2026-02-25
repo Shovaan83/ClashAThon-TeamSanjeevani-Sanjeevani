@@ -52,4 +52,12 @@ class ApiEndpoints {
 
   /// POST  /medicine/response/  — pharmacy responds accept/reject
   static const String medicineResponse = 'medicine/response/';
+
+  // ── Accounts Profile (pharmacy extended profile) ─────────
+  /// POST  /api/profilecreate/  — create pharmacy extended profile
+  static const String accountsProfileCreate = 'api/profilecreate/';
+
+  /// PUT  /api/profileprofile/{pk}/update/  — update pharmacy extended profile
+  static String accountsProfileUpdate(int pk) =>
+      'api/profileprofile/$pk/update/';
 }

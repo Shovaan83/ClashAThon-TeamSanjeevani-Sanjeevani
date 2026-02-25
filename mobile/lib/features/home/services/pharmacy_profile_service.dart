@@ -106,4 +106,49 @@ class PharmacyProfileService {
     );
     return raw as Map<String, dynamic>;
   }
+
+  // ── Accounts Profile (extended profile from accountsprofile app) ──────────
+
+  /// Create pharmacy extended profile (POST /api/profilecreate/).
+  ///
+  /// [pharmacyId]      — FK to Pharmacy model.
+  /// [pharmacyDocsId]  — FK to PharmacyDocument model.
+  /// [phoneNumber]     — Contact phone number (max 15 chars).
+  /// [address]         — Full address text.
+  Future<Map<String, dynamic>> createExtendedProfile({
+    required int pharmacyId,
+    required int pharmacyDocsId,
+    required String phoneNumber,
+    required String address,
+  }) async {
+    final raw = await _api.post(
+      ApiEndpoints.accountsProfileCreate,
+      body: {
+        'pharmacy': {'id': pharmacyId, 'lat': 0.0, 'lng': 0.0},
+        'pharmacy_docs': {'id': pharmacyDocsId},
+        'phone_number': phoneNumber,
+        'address': address,
+      },
+      requiresAuth: true,
+    );
+    return raw as Map<String, dynamic>;
+  }
+
+  /// Update pharmacy extended profile (PUT /api/profileprofile/{pk}/update/).
+  Future<Map<String, dynamic>> updateExtendedProfile({
+    required int pk,
+    String? phoneNumber,
+    String? address,
+  }) async {
+    final body = <String, dynamic>{
+      if (phoneNumber != null) 'phone_number': phoneNumber,
+      if (address != null) 'address': address,
+    };
+    final raw = await _api.put(
+      ApiEndpoints.accountsProfileUpdate(pk),
+      body: body,
+      requiresAuth: true,
+    );
+    return raw as Map<String, dynamic>;
+  }
 }

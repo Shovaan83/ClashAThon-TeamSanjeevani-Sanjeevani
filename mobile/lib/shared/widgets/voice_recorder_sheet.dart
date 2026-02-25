@@ -129,90 +129,119 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag handle
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final nav = Navigator.of(context);
 
-            // Title
-            const Text(
-              'Record Voice Message',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Max ${_kMaxDuration.inMinutes}m ${_kMaxDuration.inSeconds % 60}s',
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 24),
+        // Auto-stop & return file when dismissed during recording / paused
+        if (_state == _RecordState.recording || _state == _RecordState.paused) {
+          _timer?.cancel();
+          final path = await _recorder.stop();
+          final resolved = path ?? _filePath;
+          if (resolved != null && mounted) {
+            nav.pop(File(resolved));
+          } else if (mounted) {
+            nav.pop();
+          }
+          return;
+        }
 
-            // Timer
-            Text(
-              _formatTime(_elapsed),
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.w300,
-                color: _state == _RecordState.recording
-                    ? AppColors.error
-                    : _state == _RecordState.paused
-                    ? AppColors.accent
-                    : AppColors.textPrimary,
-                fontFeatures: const [FontFeature.tabularFigures()],
+        // If done, return the recorded file
+        if (_state == _RecordState.done && _filePath != null) {
+          nav.pop(File(_filePath!));
+          return;
+        }
+
+        // Idle — just close
+        nav.pop();
+      },
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            if (_state == _RecordState.paused)
+              const SizedBox(height: 20),
+
+              // Title
               const Text(
-                'PAUSED',
+                'Record Voice Message',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Max ${_kMaxDuration.inMinutes}m ${_kMaxDuration.inSeconds % 60}s',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Timer
+              Text(
+                _formatTime(_elapsed),
                 style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.accent,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            const SizedBox(height: 8),
-
-            // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: _progress,
-                minHeight: 4,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _state == _RecordState.recording
+                  fontSize: 48,
+                  fontWeight: FontWeight.w300,
+                  color: _state == _RecordState.recording
                       ? AppColors.error
-                      : AppColors.primary,
+                      : _state == _RecordState.paused
+                      ? AppColors.accent
+                      : AppColors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-            ),
-            const SizedBox(height: 28),
+              if (_state == _RecordState.paused)
+                const Text(
+                  'PAUSED',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accent,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              const SizedBox(height: 8),
 
-            // ── Controls ────────────────────────────────────
-            _buildControls(),
+              // Progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _progress,
+                  minHeight: 4,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _state == _RecordState.recording
+                        ? AppColors.error
+                        : AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
 
-            const SizedBox(height: 12),
-          ],
+              // ── Controls ────────────────────────────────────
+              _buildControls(),
+
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     );
@@ -286,36 +315,40 @@ class _VoiceRecorderSheetState extends State<VoiceRecorderSheet> {
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            OutlinedButton.icon(
-              onPressed: _discard,
-              icon: const Icon(Icons.delete_outline, size: 20),
-              label: const Text('Discard'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.error,
-                side: const BorderSide(color: AppColors.error),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+            Flexible(
+              child: OutlinedButton.icon(
+                onPressed: _discard,
+                icon: const Icon(Icons.delete_outline, size: 20),
+                label: const Text('Discard'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 16),
-            ElevatedButton.icon(
-              onPressed: _confirm,
-              icon: const Icon(Icons.check, size: 20),
-              label: const Text('Send'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+            Flexible(
+              child: ElevatedButton.icon(
+                onPressed: _confirm,
+                icon: const Icon(Icons.check, size: 20),
+                label: const Text('Send'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
                 ),
               ),
             ),
