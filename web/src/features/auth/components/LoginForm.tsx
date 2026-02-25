@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { loginSchema, type LoginFormData } from '../schemas/registerSchema';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { api, mapBackendRole } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [apiError, setApiError] = useState('');
   const login = useAuthStore((s) => s.login);
+  const navigate = useNavigate();
 
   const {
     register,
@@ -18,16 +22,25 @@ export default function LoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema) });
 
-  function onSubmit(data: LoginFormData) {
-    // TODO: replace with real API call — backend returns role from token
-    console.log('Login:', data);
-    login('mock-token', {
-      id: 'mock-id',
-      name: 'User',
-      email: data.email,
-      role: 'patient', // will be set from API response
-      isVerified: true,
-    });
+  async function onSubmit(data: LoginFormData) {
+    setApiError('');
+    try {
+      const res = await api.login(data.email, data.password);
+      const { user, tokens } = res.data;
+      const role = mapBackendRole(user.role);
+
+      login(tokens.access, {
+        id: String(user.id),
+        name: user.name,
+        email: user.email,
+        role,
+        isVerified: true,
+      });
+
+      navigate(role === 'patient' ? '/dashboard/patient' : '/dashboard/pharmacy');
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Login failed.');
+    }
   }
 
   return (
@@ -88,6 +101,12 @@ export default function LoginForm() {
           <p className="mt-1.5 text-xs text-[#FF6B35]">{errors.password.message}</p>
         )}
       </div>
+
+      {apiError && (
+        <p className="text-sm text-[#FF6B35] border border-[#FF6B35]/30 bg-[#FF6B35]/5 p-3">
+          {apiError}
+        </p>
+      )}
 
       {/* Submit */}
       <Button type="submit" disabled={isSubmitting} size="lg" className="w-full mt-2">

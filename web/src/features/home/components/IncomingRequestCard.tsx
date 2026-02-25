@@ -8,6 +8,8 @@ interface IncomingRequestCardProps {
   distanceKm: number;
   patientLabel: string;
   isUrgent?: boolean;
+  onAccept?: () => void;
+  onDecline?: () => void;
 }
 
 const STATUS_CONFIG: Record<RequestStatus, { borderColor: string; stripColor: string; badgeClass: string; badgeLabel: string }> = {
@@ -37,6 +39,8 @@ export default function IncomingRequestCard({
   distanceKm,
   patientLabel,
   isUrgent = false,
+  onAccept,
+  onDecline,
 }: IncomingRequestCardProps) {
   const cfg = STATUS_CONFIG[status];
 
@@ -66,10 +70,16 @@ export default function IncomingRequestCard({
 
         {status === 'pending' && (
           <div className="grid grid-cols-2 gap-2">
-            <button className="flex items-center justify-center gap-1.5 py-2 bg-[#2D5A40] text-white text-sm font-bold hover:brightness-110 transition-all">
+            <button
+              onClick={onAccept}
+              className="flex items-center justify-center gap-1.5 py-2 bg-[#2D5A40] text-white text-sm font-bold hover:brightness-110 transition-all"
+            >
               <Check size={14} /> Accept
             </button>
-            <button className="flex items-center justify-center gap-1.5 py-2 border border-stone-200 text-stone-600 text-sm font-bold hover:bg-stone-100 transition-all">
+            <button
+              onClick={onDecline}
+              className="flex items-center justify-center gap-1.5 py-2 border border-stone-200 text-stone-600 text-sm font-bold hover:bg-stone-100 transition-all"
+            >
               <X size={14} /> Decline
             </button>
           </div>

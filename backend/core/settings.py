@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'medicine',
     'customer',
     'accountsprofile',
+    'DailyRemainder',
 ]
 
 MIDDLEWARE = [
@@ -152,14 +153,14 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-
 REST_FRAMEWORK = {
-
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
 }
-
 
 EMAIL_HOST = 'smtp.gmail.com'  
 
@@ -194,6 +195,24 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_ALWAYS_EAGER = False  # Set to True for debugging without Celery worker
 
+# Celery Beat Schedule (Periodic Tasks)
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'generate-daily-occurrences': {
+        'task': 'DailyRemainder.task.generate_daily_occurrences',
+        'schedule': crontab(hour=0, minute=0),  # Run daily at midnight
+    },
+    'check-missed-occurrences': {
+        'task': 'DailyRemainder.task.check_missed_occurrences',
+        'schedule': crontab(minute='*/30'),  # Run every 30 minutes
+    },
+    'send-reminder-notifications': {
+        'task': 'DailyRemainder.task.send_reminder_notifications',
+        'schedule': crontab(minute='*/5'),  # Run every 5 minutes
+    },
+}
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173","http://127.0.0.1:5173"
@@ -205,3 +224,12 @@ CORS_ALLOW_CREDENTIALS = True
 # Media files (uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Firebase Cloud Messaging (FCM) Configuration
+# To enable push notifications:
+# 1. Go to Firebase Console (https://console.firebase.google.com/)
+# 2. Navigate to Project Settings > Service Accounts
+# 3. Click "Generate New Private Key" and download the JSON file
+# 4. Save it as 'firebase-credentials.json' in the project root (same level as manage.py)
+# 5. Add firebase-credentials.json to .gitignore (NEVER commit this file!)
+FIREBASE_CREDENTIALS_PATH = BASE_DIR / 'firebase-credentials.json'
