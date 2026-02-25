@@ -6,6 +6,7 @@ import 'package:sanjeevani/features/auth/screens/otp_verification_screen.dart';
 import 'package:sanjeevani/features/auth/screens/signup_details_screen.dart';
 import 'package:sanjeevani/features/static/splash_screen.dart';
 import 'package:sanjeevani/features/home/screens/main_screen.dart';
+import 'package:sanjeevani/features/chatbot/screens/chatbot_screen.dart';
 import 'package:sanjeevani/shared/widgets/role_selector.dart';
 
 class AppRouter {
@@ -35,9 +36,10 @@ class AppRouter {
       case AppRoutes.home:
         final args = settings.arguments as Map<String, dynamic>?;
         final role = (args?['role'] as UserRole?) ?? UserRole.patient;
-        return MaterialPageRoute(
-          builder: (_) => MainScreen(role: role),
-        );
+        return MaterialPageRoute(builder: (_) => MainScreen(role: role));
+
+      case AppRoutes.chatbot:
+        return MaterialPageRoute(builder: (_) => const ChatbotScreen());
 
       default:
         return MaterialPageRoute(

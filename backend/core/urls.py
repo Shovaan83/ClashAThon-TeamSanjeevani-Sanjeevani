@@ -22,12 +22,20 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    path("", include("accounts.urls")),
-    path("", include("pharmacy.urls")),
+    # Customer app - all customer-related endpoints
+    path('customer/', include('customer.urls')),
+    
+    # Legacy/shared accounts endpoints (can be removed later)
+    path('', include('accounts.urls')),
+    
+    # Pharmacy endpoints
+    path('', include('pharmacy.urls')),
+    
+    # Medicine requests
+    path('medicine/', include('medicine.urls')),
 
-    # swagger docs
+    # Swagger docs
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    
 ]

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sanjeevani/config/theme/app_theme.dart';
+import 'package:sanjeevani/core/constants/routes.dart';
 import 'package:sanjeevani/features/home/screens/add_screen.dart';
 import 'package:sanjeevani/features/home/screens/notification_screen.dart';
 import 'package:sanjeevani/features/home/screens/patient_home_content.dart';
@@ -43,9 +45,44 @@ class _MainScreenState extends State<MainScreen> {
     ];
   }
 
+  String get _appBarTitle {
+    switch (widget.role) {
+      case UserRole.pharmacy:
+        return 'Sanjeevani Pharmacy';
+      case UserRole.admin:
+        return 'Sanjeevani Admin';
+      default:
+        return 'Sanjeevani';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          _appBarTitle,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.support_agent_outlined,
+              color: Colors.white,
+              size: 26,
+            ),
+            tooltip: 'AI Health Assistant',
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.chatbot),
+          ),
+        ],
+      ),
       body: SafeArea(child: _tabs[_currentIndex]),
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,

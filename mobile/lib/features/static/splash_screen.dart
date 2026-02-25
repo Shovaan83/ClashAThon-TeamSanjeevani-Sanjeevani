@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
+import 'package:sanjeevani/shared/widgets/role_selector.dart';
 
 /// Shown at app launch while we check for a stored JWT token.
 /// Routes to [AppRoutes.home] if token exists, [AppRoutes.loginScreen] otherwise.
@@ -20,12 +21,25 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    final token = await StorageService().getAuthToken();
+    final storage = StorageService();
+    final token = await storage.getAuthToken();
 
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+      // Restore the stored role so the correct home content is shown
+      final roleStr = await storage.getUserRole();
+      final role = roleStr != null
+          ? UserRoleX.fromBackend(roleStr)
+          : UserRole.patient;
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.home,
+          arguments: {'role': role},
+        );
+      }
     } else {
       Navigator.pushReplacementNamed(context, AppRoutes.loginScreen);
     }
