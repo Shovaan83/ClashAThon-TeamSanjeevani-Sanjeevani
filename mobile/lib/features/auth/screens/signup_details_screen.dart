@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sanjeevani/config/exception/api_exception.dart';
+import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/api_endpoints.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
@@ -94,30 +95,64 @@ class _SignupDetailsScreenState extends State<SignupDetailsScreen> {
             if (_hasLocation) 'lng': _longitude,
           },
         );
+
+        // Pharmacy doesn't get auto-tokens — redirect to login
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.loginScreen,
+            (route) => false,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pharmacy registered! Please log in.'),
+            ),
+          );
+        }
       } else {
-        // Patient / other role registration
-        await ApiService().post(
-          ApiEndpoints.register,
+        // Patient registration via /customer/register/
+        final response = await ApiService().post(
+          ApiEndpoints.customerRegister,
           body: {
             'email': _email,
             'password': _passwordController.text,
+            'confirm_password': _confirmPasswordController.text,
             'name': _nameController.text.trim(),
             'phone_number': _phoneController.text.trim(),
           },
         );
-      }
 
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.loginScreen,
-          (route) => false,
+        // Backend returns tokens — auto-login
+        final data = response['data'] as Map<String, dynamic>;
+        final user = data['user'] as Map<String, dynamic>;
+        final tokens = data['tokens'] as Map<String, dynamic>;
+
+        await ApiService().saveTokens(
+          access: tokens['access'] as String,
+          refresh: tokens['refresh'] as String,
         );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully! Please log in.'),
-          ),
-        );
+
+        final storage = StorageService();
+        await storage.saveUserRole(user['role'] as String);
+        await storage.saveUserName(user['name'] as String);
+        await storage.saveUserEmail(user['email'] as String);
+
+        final role = UserRoleX.fromBackend(user['role'] as String);
+
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.home,
+            (route) => false,
+            arguments: {'role': role},
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Welcome to Sanjeevani!'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
       }
     } on ApiException catch (e) {
       if (mounted) {

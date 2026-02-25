@@ -41,15 +41,31 @@ class _LoginScreenState extends State<LoginScreen> {
         body: {'email': _controller.email, 'password': _controller.password},
       );
 
-      // Backend returns { status, message, data: { access, refresh } }
+      // Backend returns { status, message, data: { user: {..., role}, tokens: { access, refresh } } }
       final data = response['data'] as Map<String, dynamic>;
+      final user = data['user'] as Map<String, dynamic>;
+      final tokens = data['tokens'] as Map<String, dynamic>;
+
       await ApiService().saveTokens(
-        access: data['access'] as String,
-        refresh: data['refresh'] as String,
+        access: tokens['access'] as String,
+        refresh: tokens['refresh'] as String,
       );
 
+      // Persist user info for splash-screen role routing
+      final storage = StorageService();
+      await storage.saveUserRole(user['role'] as String);
+      await storage.saveUserName(user['name'] as String);
+      await storage.saveUserEmail(user['email'] as String);
+
+      // Route to the correct home screen based on role
+      final role = UserRoleX.fromBackend(user['role'] as String);
+
       if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.home,
+          arguments: {'role': role},
+        );
       }
     } on ApiException catch (e) {
       if (mounted) {
