@@ -3,3 +3,10 @@
 from .celery import app as celery_app
 
 __all__ = ('celery_app',)
+
+# Initialize Firebase Admin SDK for push notifications
+try:
+    from utils.firebase import initialize_firebase
+    initialize_firebase()
+except Exception as e:
+    print(f"Firebase initialization skipped: {str(e)}")
