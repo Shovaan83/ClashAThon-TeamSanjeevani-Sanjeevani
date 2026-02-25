@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 8),
 
-                //  Forgot password 
+                //  Forgot password
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(

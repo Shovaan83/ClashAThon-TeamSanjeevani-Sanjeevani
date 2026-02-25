@@ -29,8 +29,9 @@ class _SplashScreenState extends State<SplashScreen> {
     if (token != null && token.isNotEmpty) {
       // Restore the stored role so the correct home content is shown
       final roleStr = await storage.getUserRole();
-      final role =
-          roleStr != null ? UserRoleX.fromBackend(roleStr) : UserRole.patient;
+      final role = roleStr != null
+          ? UserRoleX.fromBackend(roleStr)
+          : UserRole.patient;
 
       if (mounted) {
         Navigator.pushReplacementNamed(

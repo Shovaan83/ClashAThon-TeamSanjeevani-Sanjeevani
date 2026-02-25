@@ -1,19 +1,18 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
-  
   static final StorageService _instance = StorageService._internal();
   factory StorageService() => _instance;
   StorageService._internal();
 
-  // Keys 
+  // Keys
   static const String _authTokenKey = 'auth_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userRoleKey = 'user_role';
   static const String _userNameKey = 'user_name';
   static const String _userEmailKey = 'user_email';
 
-  // Auth Token 
+  // Auth Token
   Future<void> saveAuthToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_authTokenKey, token);
@@ -29,7 +28,7 @@ class StorageService {
     await prefs.remove(_authTokenKey);
   }
 
-  //Refresh Token 
+  //Refresh Token
   Future<void> saveRefreshToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_refreshTokenKey, token);
@@ -44,7 +43,6 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_refreshTokenKey);
   }
-
 
   // User Role
   Future<void> saveUserRole(String role) async {
