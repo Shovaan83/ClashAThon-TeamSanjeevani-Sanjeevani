@@ -5,7 +5,7 @@ class ApiBaseUrl {
   static const String _emulatorUrl = "http://10.0.2.2:8000/";
 
   // Real device URL (local network IP)
-  static const String _realDeviceUrl = "http://192.168.1.67:8000/";
+  static const String _realDeviceUrl = "http://192.168.1.70:8000/";
 
   static String get baseUrl {
     if (Platform.isAndroid) {

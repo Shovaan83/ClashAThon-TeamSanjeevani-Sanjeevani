@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
 import 'package:sanjeevani/core/service/api_service.dart';
 import 'package:sanjeevani/features/home/services/customer_service.dart';
 import 'package:sanjeevani/features/home/services/pharmacy_profile_service.dart';
+import 'package:sanjeevani/shared/utils/url_helper.dart';
 
 /// Profile screen — loads real data from the backend.
 ///
@@ -23,9 +27,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
 
   bool _isSaving = false;
   bool _isLoading = true;
+  bool _isUploadingPhoto = false;
+  bool _isUploadingDoc = false;
   String? _error;
 
   // Determined dynamically from StorageService
@@ -33,7 +40,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _userRole = '';
 
   // Pharmacy-specific fields
-  String _pharmacyAddress = '';
+  double? _lat;
+  double? _lng;
+  String? _profilePhotoUrl;
+  String? _documentUrl;
+  String? _documentStatus;
 
   // Security state
   bool _pushNotifications = true;
@@ -41,6 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final _customerService = CustomerService();
   final _pharmacyService = PharmacyProfileService();
+  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -72,7 +84,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 (data['phone_number'] as String?) ??
                 (data['user']?['phone_number'] as String?) ??
                 '';
-            _pharmacyAddress = (data['address'] as String?) ?? '';
+            _addressController.text = (data['address'] as String?) ?? '';
+            _lat = (data['lat'] as num?)?.toDouble();
+            _lng = (data['lng'] as num?)?.toDouble();
+            _profilePhotoUrl = UrlHelper.resolveMediaUrl(
+              data['profile_photo_url'] as String?,
+            );
+            _documentUrl = UrlHelper.resolveMediaUrl(
+              data['document_url'] as String?,
+            );
+            _documentStatus = data['document_status'] as String?;
             _isLoading = false;
           });
         }
@@ -107,6 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -119,7 +141,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await _pharmacyService.updateProfile(
           name: _nameController.text.trim(),
           phoneNumber: _phoneController.text.trim(),
-          address: _pharmacyAddress,
+          address: _addressController.text.trim(),
+          lat: _lat,
+          lng: _lng,
         );
       } else {
         await _customerService.updateProfile(
@@ -149,6 +173,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       }
+    }
+  }
+
+  // ── Photo / Document upload ────────────────────────────
+  Future<void> _pickAndUploadProfilePhoto() async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+
+    setState(() => _isUploadingPhoto = true);
+    try {
+      await _pharmacyService.uploadProfilePhoto(File(picked.path));
+      // Reload profile to get URL
+      await _loadProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile photo updated.'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Photo upload failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  Future<void> _pickAndUploadDocument() async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    setState(() => _isUploadingDoc = true);
+    try {
+      await _pharmacyService.uploadDocument(File(picked.path));
+      await _loadProfile();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Document uploaded successfully.'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Document upload failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingDoc = false);
     }
   }
 
@@ -210,7 +304,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ? _nameController.text
                   : (_isPharmacy ? 'Pharmacy' : 'Patient'),
               roleLabel: _isPharmacy ? 'PHARMACY' : 'PATIENT',
-              onEditTap: () {},
+              profilePhotoUrl: _profilePhotoUrl,
+              onEditTap: _isPharmacy ? _pickAndUploadProfilePhoto : () {},
             ),
 
             const SizedBox(height: 16),
@@ -264,6 +359,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         decoration: _inputDeco('+977 XXXX-XXXXXX'),
                       ),
                     ),
+                    if (_isPharmacy) ...[
+                      const SizedBox(height: 12),
+                      _FieldGroup(
+                        label: 'Address',
+                        child: TextFormField(
+                          controller: _addressController,
+                          style: _fieldStyle,
+                          maxLines: 2,
+                          decoration: _inputDeco('Full pharmacy address'),
+                        ),
+                      ),
+                      if (_lat != null && _lng != null) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Lat: ${_lat!.toStringAsFixed(5)}, Lng: ${_lng!.toStringAsFixed(5)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                     const SizedBox(height: 16),
                     Align(
                       alignment: Alignment.centerRight,
@@ -299,6 +426,243 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
+
+            // ── Pharmacy profile photo section ────────────
+            if (_isPharmacy) ...[
+              const SizedBox(height: 16),
+              _SectionCard(
+                icon: Icons.camera_alt_outlined,
+                title: 'Profile Photo',
+                child: Column(
+                  children: [
+                    if (_profilePhotoUrl != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          _profilePhotoUrl!,
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 120,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                size: 36,
+                                color: AppColors.textHint,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.border,
+                            style: BorderStyle.solid,
+                          ),
+                        ),
+                        child: const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.add_a_photo_outlined,
+                                size: 32,
+                                color: AppColors.textHint,
+                              ),
+                              SizedBox(height: 6),
+                              Text(
+                                'No profile photo',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textHint,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 38,
+                      child: OutlinedButton.icon(
+                        onPressed: _isUploadingPhoto
+                            ? null
+                            : _pickAndUploadProfilePhoto,
+                        icon: _isUploadingPhoto
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : const Icon(Icons.upload_outlined, size: 16),
+                        label: Text(
+                          _isUploadingPhoto
+                              ? 'Uploading…'
+                              : (_profilePhotoUrl != null
+                                    ? 'Change Photo'
+                                    : 'Upload Photo'),
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Pharmacy document section ──────────────────
+              const SizedBox(height: 16),
+              _SectionCard(
+                icon: Icons.description_outlined,
+                title: 'Pharmacy Document',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_documentStatus != null)
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _documentStatus == 'VERIFIED'
+                                  ? AppColors.primary.withValues(alpha: 0.1)
+                                  : AppColors.accent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              _documentStatus!,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: _documentStatus == 'VERIFIED'
+                                    ? AppColors.primary
+                                    : AppColors.accent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (_documentUrl != null) ...[
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          _documentUrl!,
+                          height: 140,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 100,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.insert_drive_file_outlined,
+                                size: 36,
+                                color: AppColors.textHint,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ] else
+                      Container(
+                        height: 100,
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(top: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.upload_file_outlined,
+                                size: 28,
+                                color: AppColors.textHint,
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'No document uploaded',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textHint,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 38,
+                      child: OutlinedButton.icon(
+                        onPressed: _isUploadingDoc
+                            ? null
+                            : _pickAndUploadDocument,
+                        icon: _isUploadingDoc
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : const Icon(Icons.upload_outlined, size: 16),
+                        label: Text(
+                          _isUploadingDoc
+                              ? 'Uploading…'
+                              : (_documentUrl != null
+                                    ? 'Re-upload Document'
+                                    : 'Upload Document'),
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             const SizedBox(height: 16),
 
@@ -390,11 +754,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 class _ProfileHeader extends StatelessWidget {
   final String name;
   final String roleLabel;
+  final String? profilePhotoUrl;
   final VoidCallback onEditTap;
 
   const _ProfileHeader({
     required this.name,
     required this.roleLabel,
+    this.profilePhotoUrl,
     required this.onEditTap,
   });
 
@@ -415,11 +781,16 @@ class _ProfileHeader extends StatelessWidget {
               CircleAvatar(
                 radius: 36,
                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                child: const Icon(
-                  Icons.person,
-                  size: 38,
-                  color: AppColors.primary,
-                ),
+                backgroundImage: profilePhotoUrl != null
+                    ? NetworkImage(profilePhotoUrl!)
+                    : null,
+                child: profilePhotoUrl == null
+                    ? const Icon(
+                        Icons.person,
+                        size: 38,
+                        color: AppColors.primary,
+                      )
+                    : null,
               ),
               Positioned(
                 bottom: 0,

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Singleton wrapper around [SharedPreferences].
@@ -103,5 +105,38 @@ class StorageService {
   Future<int?> getUserId() async {
     final prefs = await _store;
     return prefs.getInt(_userIdKey);
+  }
+
+  // ── Audio URL Persistence ────────────────────────────────────────────────
+  // Stores audio URLs keyed by medicine-request ID so they survive app
+  // restarts. Data is a JSON-encoded Map<String, String>.
+  static const String _audioUrlsKey = 'audio_urls';
+
+  /// Persist an audio URL for the given [requestId].
+  Future<void> saveAudioUrl(int requestId, String url) async {
+    final prefs = await _store;
+    final raw = prefs.getString(_audioUrlsKey);
+    final map = raw != null
+        ? Map<String, String>.from(json.decode(raw) as Map)
+        : <String, String>{};
+    map[requestId.toString()] = url;
+    await prefs.setString(_audioUrlsKey, json.encode(map));
+  }
+
+  /// Retrieve a previously-persisted audio URL for [requestId], or null.
+  Future<String?> getAudioUrl(int requestId) async {
+    final prefs = await _store;
+    final raw = prefs.getString(_audioUrlsKey);
+    if (raw == null) return null;
+    final map = Map<String, String>.from(json.decode(raw) as Map);
+    return map[requestId.toString()];
+  }
+
+  /// Return the entire persisted audio-URL map (request-id → URL).
+  Future<Map<String, String>> getAllAudioUrls() async {
+    final prefs = await _store;
+    final raw = prefs.getString(_audioUrlsKey);
+    if (raw == null) return {};
+    return Map<String, String>.from(json.decode(raw) as Map);
   }
 }

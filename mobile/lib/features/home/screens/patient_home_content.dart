@@ -483,27 +483,52 @@ class _BroadcastCard extends StatelessWidget {
 
 /// Looks up the [NotificationProvider] for a `pharmacy_response` notification
 /// matching [requestId], and shows a "Play Voice Message" button when audio
-/// is available.
-class _AudioFromNotification extends StatelessWidget {
+/// is available. Falls back to persisted audio URLs in [StorageService] so
+/// that audio survives app restarts.
+class _AudioFromNotification extends StatefulWidget {
   final int requestId;
   const _AudioFromNotification({required this.requestId});
+
+  @override
+  State<_AudioFromNotification> createState() => _AudioFromNotificationState();
+}
+
+class _AudioFromNotificationState extends State<_AudioFromNotification> {
+  String? _persistedUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPersistedUrl();
+  }
+
+  Future<void> _loadPersistedUrl() async {
+    final raw = await StorageService().getAudioUrl(widget.requestId);
+    if (raw != null && mounted) {
+      setState(() => _persistedUrl = UrlHelper.resolveMediaUrl(raw));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<NotificationProvider>(
       builder: (context, provider, _) {
-        // Find the matching notification with audio
+        // 1) Check in-memory notifications first.
         String? audioUrl;
         for (final n in provider.notifications) {
           if (n.type == 'pharmacy_response') {
             final nReqId = n.payload['request_id'];
-            if (nReqId != null && nReqId.toString() == requestId.toString()) {
+            if (nReqId != null &&
+                nReqId.toString() == widget.requestId.toString()) {
               final raw = n.payload['audio_url'] as String?;
               audioUrl = UrlHelper.resolveMediaUrl(raw);
               break;
             }
           }
         }
+
+        // 2) Fall back to persisted audio URL from SharedPreferences.
+        audioUrl ??= _persistedUrl;
 
         if (audioUrl == null) return const SizedBox.shrink();
 

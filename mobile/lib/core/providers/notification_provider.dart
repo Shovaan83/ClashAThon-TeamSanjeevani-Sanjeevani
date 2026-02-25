@@ -192,6 +192,17 @@ class NotificationProvider extends ChangeNotifier {
     );
 
     _notifications.insert(0, notification);
+
+    // Persist audio URL so it survives app restarts.
+    final audioUrl = msg['audio_url'] as String?;
+    final requestId = msg['request_id'];
+    if (audioUrl != null && audioUrl.isNotEmpty && requestId != null) {
+      _storage.saveAudioUrl(
+        requestId is int ? requestId : int.tryParse(requestId.toString()) ?? 0,
+        audioUrl,
+      );
+    }
+
     notifyListeners();
 
     // Refresh requests to get updated status

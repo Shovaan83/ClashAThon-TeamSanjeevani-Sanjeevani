@@ -54,3 +54,7 @@ app.*.map.json
 /sanjeevani.iml
 /test
 /.env
+lib/firebase_options.dart
+firebase.json
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
