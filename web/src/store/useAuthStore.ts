@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type UserRole = 'patient' | 'pharmacy';
+export type UserRole = 'patient' | 'pharmacy' | 'ADMIN';
 
 export interface User {
   id: string;
@@ -13,10 +13,12 @@ export interface User {
 
 export interface AuthState {
   token: string | null;
+  refreshToken: string | null;
   user: User | null;
   isAuthenticated: boolean;
-  login: (token: string, user: User) => void;
-  logout: () => void;
+  login: (accessToken: string, user: User, refreshToken?: string) => void;
+  setAccessToken: (token: string) => void;
+  logout: () => Promise<void>;
   setVerified: (status: boolean) => void;
 }
 
@@ -24,12 +26,30 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       token: null,
+      refreshToken: null,
       user: null,
       isAuthenticated: false,
 
-      login: (token, user) => set({ token, user, isAuthenticated: true }),
+      login: (accessToken, user, refreshToken) =>
+        set({ token: accessToken, refreshToken: refreshToken ?? null, user, isAuthenticated: true }),
 
-      logout: () => set({ token: null, user: null, isAuthenticated: false }),
+      setAccessToken: (token) => set({ token }),
+
+      logout: async () => {
+  const { refreshToken } = useAuthStore.getState();
+
+  if (refreshToken) {
+    const { api } = await import('@/lib/api'); // adjust path if needed
+    await api.logoutUser(refreshToken);
+  }
+
+  set({
+    token: null,
+    refreshToken: null,
+    user: null,
+    isAuthenticated: false,
+  });
+},
 
       setVerified: (status) =>
         set((state) => ({

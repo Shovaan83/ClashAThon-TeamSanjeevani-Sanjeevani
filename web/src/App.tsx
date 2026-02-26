@@ -3,8 +3,34 @@ import AuthLayout from './layouts/AuthLayout';
 import SignupPage from './features/auth/pages/SignupPage';
 import LoginPage from './features/auth/pages/LoginPage';
 import HomePage from './features/home/pages/HomePage';
+import PatientDashboardPage from './features/home/pages/PatientDashboardPage';
+import PharmacyDashboardPage from './features/home/pages/PharmacyDashboardPage';
+import PatientProfilePage from './features/home/pages/PatientProfilePage';
+import PharmacyProfile from "./features/home/pages/PharmacyProfile";
+import SearchPage from "./features/home/pages/SearchPage";
+import DevTools from "./components/DevTools";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuthStore } from "./store/useAuthStore";
+import MedicineRequestHistory from "./features/home/MedicineRequestHistory";
+import IncomingRequestModal from "./features/home/components/IncomingRequestModal";
+import { useRequestStore } from "./store/useRequestStore";
+import PharmacyAnalyticsPage from "./features/home/pages/PharmacyAnalyticsPage";
+import GeneralProtectedRoute from './components/AdminProtectedRoute';
+import AdminDashboard from './features/home/pages/admin/AdminDashboard';
+import KycPage from './features/home/pages/admin/KycPage';
+import AdminPharmaciesPage from './features/home/pages/admin/AdminPharmaciesPage';
+
+
+function DashboardRedirect() {
+  const { user } = useAuthStore();
+  if (user?.role === "pharmacy")
+    return <Navigate to="/dashboard/pharmacy" replace />;
+  return <Navigate to="/dashboard/patient" replace />;
+}
 
 export default function App() {
+  const { isModalOpen } = useRequestStore();
+
   return (
     <BrowserRouter>
       <Routes>
@@ -14,16 +40,50 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
         </Route>
 
-        {/* Home page — generic for both patient and pharmacy */}
+        {/* Landing */}
         <Route path="/home" element={<HomePage />} />
-        <Route path="/dashboard/patient" element={<Navigate to="/home" replace />} />
-        <Route path="/dashboard/pharmacy" element={<Navigate to="/home" replace />} />
-        <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+
+        {/* Pharmacy search */}
+        <Route path="/search" element={<SearchPage />} />
+
+        {/* Pharmacy Profile */}
+        <Route path="/pharmacy/:id" element={<PharmacyProfile />} />
+        <Route path="/pharmacy/requests" element={<MedicineRequestHistory />} />
+
+        {/* Pharmacy Analytics */}
+        <Route path="/pharmacy/analytics" element={<ProtectedRoute><PharmacyAnalyticsPage /></ProtectedRoute>} />
+
+        {/* Broadcast (patient ping flow) */}
+        <Route path="/broadcast" element={<ProtectedRoute><PatientDashboardPage /></ProtectedRoute>} />
+
+        {/* Role-specific dashboards */}
+        <Route path="/dashboard/patient" element={<ProtectedRoute><PatientDashboardPage /></ProtectedRoute>} />
+        <Route path="/dashboard/pharmacy" element={<ProtectedRoute><PharmacyDashboardPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardRedirect /></ProtectedRoute>} />
+
+        {/* admin dashboard */}
+
+        <Route
+  path="/admin"
+  element={
+    <GeneralProtectedRoute allowedRoles={['ADMIN']}>
+      <AdminDashboard />
+    </GeneralProtectedRoute>
+  }
+>
+  <Route index element={<Navigate to="/admin/kyc" replace />} />
+  <Route path="pharmacies" element={<AdminPharmaciesPage />} />
+  <Route path="kyc" element={<KycPage />} />
+</Route>
+        {/* Profile */}
+        <Route path="/profile" element={<ProtectedRoute><PatientProfilePage /></ProtectedRoute>} />
 
         {/* Default redirects */}
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
+      <DevTools />
+      {isModalOpen && <IncomingRequestModal />}
     </BrowserRouter>
   );
 }

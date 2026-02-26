@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { User, Phone, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { patientProfileSchema, type PatientProfileData } from '@/features/auth/schemas/registerSchema';
+import { useAuthStore } from '@/store/useAuthStore';
+import { api, mapBackendRole } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,12 +14,12 @@ interface PatientProfileStepProps {
   email: string;
 }
 
-export default function PatientProfileStep({ email: _email }: PatientProfileStepProps) {
+export default function PatientProfileStep({ email }: PatientProfileStepProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [apiError, setApiError] = useState('');
-  // Patient registration backend endpoint not yet available
-  const _login = useAuthStore((s) => s.login);
+  const login = useAuthStore((s) => s.login);
+  const navigate = useNavigate();
 
   const {
     register,
@@ -24,9 +27,33 @@ export default function PatientProfileStep({ email: _email }: PatientProfileStep
     formState: { errors, isSubmitting },
   } = useForm<PatientProfileData>({ resolver: zodResolver(patientProfileSchema) });
 
-  async function submit(_data: PatientProfileData) {
+  async function submit(data: PatientProfileData) {
     setApiError('');
-    setApiError('Patient registration is not yet available. Please check back soon.');
+    try {
+      const phone_number = data.phone.replace(/\D/g, '');
+      const res = await api.registerCustomer({
+        email,
+        name: data.name,
+        phone_number,
+        password: data.password,
+        confirm_password: data.confirmPassword,
+      });
+
+      const { user, tokens } = res.data;
+      const role = mapBackendRole(user.role);
+
+      login(tokens.access, {
+        id: String(user.id),
+        name: user.name,
+        email: user.email,
+        role,
+        isVerified: true,
+      });
+
+      navigate('/dashboard/patient');
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Registration failed.');
+    }
   }
 
   return (

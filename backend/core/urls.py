@@ -22,6 +22,9 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Admin API must come before Django admin to prevent conflict
+    path('admin/api/', include('adminapis.urls')),
+    
     path('admin/', admin.site.urls),
     
     # Customer app - all customer-related endpoints
@@ -36,6 +39,9 @@ urlpatterns = [
     
     # Medicine requests
     path('medicine/', include('medicine.urls')),
+    
+    # Daily Reminder (Medication reminders)
+    path('api/daily-reminder/', include('DailyRemainder.urls')),
 
     # Swagger docs
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

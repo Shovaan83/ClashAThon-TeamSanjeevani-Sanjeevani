@@ -10,7 +10,7 @@ from pharmacy.serializers import (
 from utils.response import ResponseMixin
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 import queue
 import json
@@ -47,6 +47,8 @@ def notify_pharmacy(image_id):
 class PharmacyViewSet(ResponseMixin, viewsets.ModelViewSet):
     queryset = Pharmacy.objects.all()
     serializer_class = RegisterPharmacySerializer
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
