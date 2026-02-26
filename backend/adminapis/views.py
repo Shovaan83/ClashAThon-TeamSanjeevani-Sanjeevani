@@ -1,11 +1,20 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, serializers
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db import models
+from django.contrib.auth import get_user_model
 from pharmacy.models import Pharmacy, PharmacyDocument
 from pharmacy.serializers import PharmacyProfileSerializer, PharmacyDocumentSerializer
 from .permissions import IsAdminUser
+
+CustomUser = get_user_model()
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email', 'name', 'phone_number', 'role', 'is_active', 'date_joined']
 
 
 # ─── Custom Pagination ─────────────────────────────────────────────────────────
@@ -160,3 +169,26 @@ def admin_kyc_action(request, pharmacy_id):
             "is_active": pharmacy_doc.is_active
         }
     })
+
+
+# ─── List all users ───────────────────────────────────────────────────────────
+class AdminUsersListView(generics.ListAPIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminUserSerializer
+    pagination_class = AdminPagination
+
+    def get_queryset(self):
+        queryset = CustomUser.objects.all().order_by('-date_joined')
+
+        role = self.request.query_params.get('role')
+        if role:
+            queryset = queryset.filter(role=role.upper())
+
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                models.Q(email__icontains=search) |
+                models.Q(name__icontains=search)
+            )
+
+        return queryset

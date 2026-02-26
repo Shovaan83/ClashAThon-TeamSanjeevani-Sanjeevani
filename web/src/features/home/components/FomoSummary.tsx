@@ -1,4 +1,25 @@
+import { useEffect, useState } from 'react';
 import { TrendingDown, BarChart2 } from 'lucide-react';
+import { api } from '@/lib/api';
+
+interface HourlyEntry {
+  time: string;
+  lost: number;
+}
+
+interface FomoData {
+  total_lost_today: number;
+  hourly_data: HourlyEntry[];
+}
+
+const DUMMY_DATA: HourlyEntry[] = [
+  { time: '9am', lost: 120 },
+  { time: '10am', lost: 340 },
+  { time: '11am', lost: 200 },
+  { time: '12pm', lost: 480 },
+  { time: '1pm', lost: 150 },
+  { time: '2pm', lost: 310 },
+];
 
 interface FomoBarProps {
   hour: string;
@@ -22,18 +43,40 @@ function FomoBar({ hour, value, maxValue }: FomoBarProps) {
   );
 }
 
-const FOMO_DATA = [
-  { hour: '9am', value: 120 },
-  { hour: '10am', value: 340 },
-  { hour: '11am', value: 200 },
-  { hour: '12pm', value: 480 },
-  { hour: '1pm', value: 150 },
-  { hour: '2pm', value: 310 },
-];
-
 export default function FomoSummary() {
-  const maxValue = Math.max(...FOMO_DATA.map((d) => d.value));
-  const total = FOMO_DATA.reduce((sum, d) => sum + d.value, 0);
+  const [data, setData] = useState<FomoData>({
+    total_lost_today: DUMMY_DATA.reduce((s, d) => s + d.lost, 0),
+    hourly_data: DUMMY_DATA,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchFomo() {
+      try {
+        const res = await api.getFomoLedger();
+        if (cancelled) return;
+
+        const hourly: HourlyEntry[] = Array.isArray(res.hourly_data) ? res.hourly_data : [];
+        const total = Number(res.total_lost_today ?? 0);
+
+        if (hourly.length > 0 || total > 0) {
+          setData({
+            total_lost_today: total,
+            hourly_data: hourly.length > 0 ? hourly : DUMMY_DATA,
+          });
+        }
+      } catch {
+        // keep dummy data on error
+      }
+    }
+
+    fetchFomo();
+    return () => { cancelled = true; };
+  }, []);
+
+  const chartData = data.hourly_data.length > 0 ? data.hourly_data : DUMMY_DATA;
+  const maxValue = Math.max(...chartData.map((d) => d.lost));
 
   return (
     <div>
@@ -45,12 +88,14 @@ export default function FomoSummary() {
       <div className="p-6 border border-stone-200 bg-white">
         {/* Headline metric */}
         <div className="flex items-center gap-3 mb-6 p-4 border border-[#FF6B35]/20 bg-[#FF6B35]/5">
-          <TrendingDown size={20} className="text-[#FF6B35] flex-shrink-0" />
+          <TrendingDown size={20} className="text-[#FF6B35] shrink-0" />
           <div>
             <p className="text-xs text-stone-500 font-bold uppercase tracking-widest">
               Potential Revenue Lost Today
             </p>
-            <p className="text-2xl font-bold text-[#1C1917]">Rs. {total.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-[#1C1917]">
+              Rs. {data.total_lost_today.toLocaleString()}
+            </p>
           </div>
         </div>
 
@@ -59,8 +104,8 @@ export default function FomoSummary() {
           Missed Requests by Hour
         </p>
         <div className="flex items-end gap-3">
-          {FOMO_DATA.map((d) => (
-            <FomoBar key={d.hour} hour={d.hour} value={d.value} maxValue={maxValue} />
+          {chartData.map((d) => (
+            <FomoBar key={d.time} hour={d.time} value={d.lost} maxValue={maxValue} />
           ))}
         </div>
       </div>

@@ -19,6 +19,8 @@ import GeneralProtectedRoute from './components/AdminProtectedRoute';
 import AdminDashboard from './features/home/pages/admin/AdminDashboard';
 import KycPage from './features/home/pages/admin/KycPage';
 import AdminPharmaciesPage from './features/home/pages/admin/AdminPharmaciesPage';
+import AdminOverviewPage from './features/home/pages/admin/AdminOverviewPage';
+import AdminUsersPage from './features/home/pages/admin/AdminUsersPage';
 
 
 function DashboardRedirect() {
@@ -72,8 +74,10 @@ export default function App() {
   }
 >
   <Route index element={<Navigate to="/admin/kyc" replace />} />
+  <Route path="dashboard" element={<AdminOverviewPage />} />
   <Route path="pharmacies" element={<AdminPharmaciesPage />} />
   <Route path="kyc" element={<KycPage />} />
+  <Route path="users" element={<AdminUsersPage />} />
 </Route>
         {/* Profile */}
         <Route path="/profile" element={<ProtectedRoute><PatientProfilePage /></ProtectedRoute>} />

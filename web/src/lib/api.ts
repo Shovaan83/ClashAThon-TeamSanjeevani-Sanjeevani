@@ -402,7 +402,63 @@ async kycAction(pharmacyId: number, action: 'APPROVE' | 'REJECT', message?: stri
   } catch (err) {
     throw new Error(extractError(err, `Failed to ${action.toLowerCase()} pharmacy.`));
   }
-}
+},
+
+/**
+ * Get all users (admin only)
+ * GET /admin/api/users/
+ * Supports ?page=1&role=CUSTOMER&search=query
+ */
+async getUsers(params?: { page?: number; page_size?: number; role?: string; search?: string }) {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.role) queryParams.append('role', params.role);
+    if (params?.search) queryParams.append('search', params.search);
+    const url = `/admin/api/users/${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const res = await apiClient.get(url);
+    return res.data;
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to fetch users.'));
+  }
+},
+
+/**
+ * Get analytics summary for authenticated pharmacy.
+ * GET /api/fomo/analytics/
+ */
+async getAnalyticsSummary() {
+  const res = await apiClient.get('/api/fomo/analytics/');
+  return res.data;
+},
+
+/**
+ * Get weekly FOMO trend for authenticated pharmacy.
+ * GET /api/fomo/weekly/
+ */
+async getWeeklyFomoTrend() {
+  const res = await apiClient.get('/api/fomo/weekly/');
+  return res.data;
+},
+
+/**
+ * Get top missed medicines for authenticated pharmacy.
+ * GET /api/fomo/top-missed/
+ */
+async getTopMissedMedicines() {
+  const res = await apiClient.get('/api/fomo/top-missed/');
+  return res.data;
+},
+
+/**
+ * Get FOMO Ledger data for the authenticated pharmacy.
+ * GET /api/fomo/
+ */
+async getFomoLedger() {
+  const res = await apiClient.get('/api/fomo/');
+  return res.data;
+},
 };
 
 

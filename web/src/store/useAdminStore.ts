@@ -41,6 +41,16 @@ export interface PaginationInfo {
   previous: string | null;
 }
 
+export interface AdminUser {
+  id: number;
+  email: string;
+  name: string;
+  phone_number: string;
+  role: 'ADMIN' | 'PHARMACY' | 'CUSTOMER';
+  is_active: boolean;
+  date_joined: string;
+}
+
 export interface AdminState {
   // Pharmacy Documents (KYC)
   documents: PharmacyDocument[];
@@ -62,12 +72,19 @@ export interface AdminState {
   kycActionLoading: number | null; // pharmacy_id being processed
   kycActionError: string | null;
 
+  // Users
+  users: AdminUser[];
+  usersLoading: boolean;
+  usersError: string | null;
+  usersPagination: PaginationInfo | null;
+
   // Actions
   fetchPharmacyDocuments: (params?: { page?: number; page_size?: number; status?: string }) => Promise<void>;
   fetchPharmacies: (params?: { page?: number; page_size?: number; status?: string; search?: string }) => Promise<void>;
   fetchPharmacyDetail: (id: number) => Promise<void>;
   approvePharmacy: (pharmacyId: number) => Promise<void>;
   rejectPharmacy: (pharmacyId: number, message: string) => Promise<void>;
+  fetchUsers: (params?: { page?: number; page_size?: number; role?: string; search?: string }) => Promise<void>;
   clearErrors: () => void;
 }
 
@@ -90,6 +107,11 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
 
   kycActionLoading: null,
   kycActionError: null,
+
+  users: [],
+  usersLoading: false,
+  usersError: null,
+  usersPagination: null,
 
   // ─── Fetch Pharmacy Documents (KYC list) ─────────────────────────────────────
   fetchPharmacyDocuments: async (params = {}) => {
@@ -163,8 +185,24 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
     }
   },
 
+  // ─── Fetch Users ─────────────────────────────────────────────────────────────
+  fetchUsers: async (params = {}) => {
+    set({ usersLoading: true, usersError: null });
+    try {
+      const response = await api.getUsers(params);
+      set({
+        users: response.data.results,
+        usersPagination: response.data.pagination,
+        usersLoading: false,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch users';
+      set({ usersError: message, usersLoading: false });
+    }
+  },
+
   // ─── Clear Errors ────────────────────────────────────────────────────────────
   clearErrors: () => {
-    set({ documentsError: null, pharmaciesError: null, kycActionError: null });
+    set({ documentsError: null, pharmaciesError: null, kycActionError: null, usersError: null });
   },
 }));
