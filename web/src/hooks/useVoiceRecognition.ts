@@ -16,7 +16,6 @@ interface UseVoiceRecognitionReturn {
   stop: () => void;
 }
 
-// Detect browser support once at module level
 const SpeechRecognitionAPI =
   typeof window !== 'undefined'
     ? window.SpeechRecognition || window.webkitSpeechRecognition
@@ -24,13 +23,33 @@ const SpeechRecognitionAPI =
 
 const IS_SUPPORTED = !!SpeechRecognitionAPI;
 
-// Matches "chaina" before "cha" since "chaina" contains "cha" as a substring.
+/**
+ * Detects "Cha" (have it / yes) or "Chaina" (don't have / no) from a transcript.
+ *
+ * Rules:
+ * - Check CHAINA before CHA because "chaina" contains "cha" as a substring.
+ * - Devanagari forms: छैन / चैन (chaina), छ / चा (cha).
+ * - Latin forms: use \b word boundaries so partial words like "chair",
+ *   "change", "each", "china" are NOT matched.
+ */
 function detectCommand(raw: string): VoiceCommand | null {
   const text = raw.toLowerCase().trim();
-  if (text.includes('chaina') || text.includes('china') || text.includes('chainna')) return 'CHAINA';
-  if (text.includes('cha') || text.includes('cha!') || text.includes('चा')) return 'CHA';
+
+  // Devanagari — what ne-NP STT actually returns
+  if (text.includes('छैन') || text.includes('चैन') || text.includes('चाइन')) return 'CHAINA';
+  if (text.includes('छ') || text.includes('चा') || text.includes('छ।')) return 'CHA';
+
+  // Latin script with word boundaries to avoid false positives
+  if (/\bchaina\b|\bchainna\b|\bchhayna\b|\bchhainn\b/.test(text)) return 'CHAINA';
+  if (/\bcha\b|\bchha\b/.test(text)) return 'CHA';
+
   return null;
 }
+
+const LANG_PRIMARY = 'ne-NP';
+const LANG_FALLBACK = 'en-US';
+// After this many consecutive silent onend events with no result, switch language.
+const SILENT_THRESHOLD = 2;
 
 export function useVoiceRecognition({
   enabled,
@@ -43,9 +62,12 @@ export function useVoiceRecognition({
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const enabledRef = useRef(enabled);
   const onMatchRef = useRef(onMatch);
-  const matchedRef = useRef(false); // prevents double-firing on the same utterance
+  const matchedRef = useRef(false);
 
-  // Keep refs in sync without restarting the recognition
+  // Language fallback state
+  const langRef = useRef<string>(LANG_PRIMARY);
+  const silentCountRef = useRef(0);
+
   useEffect(() => {
     enabledRef.current = enabled;
   }, [enabled]);
@@ -61,11 +83,14 @@ export function useVoiceRecognition({
     }
     setIsListening(false);
     setTranscript('');
+    // Reset language fallback when explicitly stopped so next activation starts fresh.
+    langRef.current = LANG_PRIMARY;
+    silentCountRef.current = 0;
   }, []);
 
   const start = useCallback(() => {
     if (!IS_SUPPORTED || !SpeechRecognitionAPI) return;
-    if (recognitionRef.current) return; // already running
+    if (recognitionRef.current) return;
 
     matchedRef.current = false;
     setError(null);
@@ -74,8 +99,7 @@ export function useVoiceRecognition({
     const recognition = new SpeechRecognitionAPI();
     recognition.continuous = true;
     recognition.interimResults = true;
-    // Try Nepali first; browser gracefully falls back if unavailable
-    recognition.lang = 'ne-NP';
+    recognition.lang = langRef.current;
     recognition.maxAlternatives = 3;
 
     recognition.onstart = () => {
@@ -85,10 +109,14 @@ export function useVoiceRecognition({
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       if (matchedRef.current) return;
 
+      // A real result arrived — reset the silent counter regardless of match.
+      silentCountRef.current = 0;
+
       let fullTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         fullTranscript += event.results[i][0].transcript;
-        // Also check alternatives
+
+        // Check alternative hypotheses first
         for (let a = 1; a < event.results[i].length; a++) {
           const alt = event.results[i][a].transcript;
           const cmd = detectCommand(alt);
@@ -113,11 +141,13 @@ export function useVoiceRecognition({
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      // 'no-speech' and 'aborted' are expected non-fatal conditions
       if (event.error === 'no-speech' || event.error === 'aborted') return;
       if (event.error === 'not-allowed') {
         setError('Microphone access denied. Please allow microphone permissions.');
         setIsListening(false);
+      } else if (event.error === 'language-not-supported') {
+        // Immediately fall back to English if the language is not supported.
+        langRef.current = LANG_FALLBACK;
       } else {
         setError(`Voice error: ${event.error}`);
       }
@@ -126,14 +156,24 @@ export function useVoiceRecognition({
     recognition.onend = () => {
       recognitionRef.current = null;
       setIsListening(false);
-      // Auto-restart if still enabled and no match yet (API stops on silence)
-      if (enabledRef.current && !matchedRef.current) {
-        setTimeout(() => {
-          if (enabledRef.current && !matchedRef.current) {
-            start();
-          }
-        }, 300);
+
+      if (!enabledRef.current || matchedRef.current) return;
+
+      // Count how many consecutive silent ends have occurred.
+      silentCountRef.current += 1;
+
+      if (silentCountRef.current >= SILENT_THRESHOLD && langRef.current !== LANG_FALLBACK) {
+        // ne-NP produced no usable results — switch to English.
+        langRef.current = LANG_FALLBACK;
+        silentCountRef.current = 0;
       }
+
+      // Auto-restart after a short pause.
+      setTimeout(() => {
+        if (enabledRef.current && !matchedRef.current) {
+          start();
+        }
+      }, 300);
     };
 
     recognitionRef.current = recognition;
@@ -145,7 +185,6 @@ export function useVoiceRecognition({
     }
   }, [stop]);
 
-  // Start/stop based on `enabled` prop
   useEffect(() => {
     if (enabled) {
       start();

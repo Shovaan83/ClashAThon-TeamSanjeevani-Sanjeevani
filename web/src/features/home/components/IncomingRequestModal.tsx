@@ -170,6 +170,7 @@ export default function IncomingRequestModal() {
     acceptRequest,
     declineRequest,
     dismissModal,
+    toggleVoiceMode,
   } = useRequestStore();
 
   const [voiceFlash, setVoiceFlash] = useState<'CHA' | 'CHAINA' | null>(null);
@@ -388,47 +389,75 @@ export default function IncomingRequestModal() {
             </div>
           )}
 
-          {/* ── Voice Listening Strip ─── shown when voice mode is on */}
-          {voiceMode && !voiceFlash && (
+          {/* ── Awaaz Toggle + Listening Strip ───────────────── */}
+          {!voiceFlash && (
             <div className="mb-4 border border-stone-200 bg-white">
-              {voiceError ? (
-                <div className="flex items-center gap-3 px-4 py-3 text-[#FF6B35]">
-                  <MicOff size={16} className="shrink-0" />
-                  <p className="text-xs font-medium">{voiceError}</p>
+              {/* Top row: label + toggle */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100">
+                <div className="flex items-center gap-2">
+                  {voiceMode ? (
+                    <Mic size={13} className="text-[#2D5A40]" />
+                  ) : (
+                    <MicOff size={13} className="text-stone-400" />
+                  )}
+                  <span className={`text-xs font-bold uppercase tracking-widest ${voiceMode ? 'text-[#2D5A40]' : 'text-stone-400'}`}>
+                    Awaz {voiceMode ? 'On' : 'Off'}
+                  </span>
                 </div>
-              ) : !isSupported ? (
-                <div className="flex items-center gap-3 px-4 py-3 text-stone-400">
-                  <MicOff size={16} className="shrink-0" />
-                  <p className="text-xs font-medium">Voice not supported in this browser. Use Chrome or Edge.</p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 px-4 py-3">
-                  {/* Pulsing mic icon */}
-                  <div className={`relative flex shrink-0 ${isListening ? 'text-[#2D5A40]' : 'text-stone-300'}`}>
-                    {isListening && (
-                      <span className="absolute inset-0 flex items-center justify-center">
-                        <span className="animate-ping absolute h-6 w-6 rounded-full bg-[#2D5A40] opacity-20" />
-                      </span>
-                    )}
-                    <Mic size={16} className="relative" />
+                <button
+                  type="button"
+                  onClick={toggleVoiceMode}
+                  disabled={!isSupported}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed ${voiceMode ? 'bg-[#2D5A40]' : 'bg-stone-200'}`}
+                  aria-label={voiceMode ? 'Disable Awaz voice mode' : 'Enable Awaz voice mode'}
+                  title={!isSupported ? 'Voice recognition requires Chrome or Edge' : undefined}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${voiceMode ? 'translate-x-4' : 'translate-x-0'}`}
+                  />
+                </button>
+              </div>
+
+              {/* Status row — only shown when voice mode is active */}
+              {voiceMode && (
+                voiceError ? (
+                  <div className="flex items-center gap-3 px-4 py-2.5 text-[#FF6B35]">
+                    <MicOff size={14} className="shrink-0" />
+                    <p className="text-xs font-medium">{voiceError}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    {isListening ? (
-                      <p className="text-xs font-bold text-[#2D5A40] uppercase tracking-wider">
-                        Listening… say{' '}
-                        <span className="text-[#2D5A40]">"CHA!"</span> to accept or{' '}
-                        <span className="text-[#FF6B35]">"CHAINA!"</span> to decline
-                      </p>
-                    ) : (
-                      <p className="text-xs text-stone-400 font-medium">Initializing microphone…</p>
-                    )}
-                    {transcript && (
-                      <p className="text-xs text-stone-400 mt-0.5 truncate">
-                        Heard: &ldquo;{transcript}&rdquo;
-                      </p>
-                    )}
+                ) : !isSupported ? (
+                  <div className="flex items-center gap-3 px-4 py-2.5 text-stone-400">
+                    <MicOff size={14} className="shrink-0" />
+                    <p className="text-xs font-medium">Voice not supported in this browser. Use Chrome or Edge.</p>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-3 px-4 py-2.5">
+                    <div className={`relative flex shrink-0 ${isListening ? 'text-[#2D5A40]' : 'text-stone-300'}`}>
+                      {isListening && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="animate-ping absolute h-5 w-5 rounded-full bg-[#2D5A40] opacity-20" />
+                        </span>
+                      )}
+                      <Mic size={14} className="relative" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {isListening ? (
+                        <p className="text-xs font-bold text-[#2D5A40] uppercase tracking-wider">
+                          Listening… say{' '}
+                          <span className="text-[#2D5A40]">"CHA!"</span> to accept or{' '}
+                          <span className="text-[#FF6B35]">"CHAINA!"</span> to decline
+                        </p>
+                      ) : (
+                        <p className="text-xs text-stone-400 font-medium">Initializing microphone…</p>
+                      )}
+                      {transcript && (
+                        <p className="text-xs text-stone-400 mt-0.5 truncate">
+                          Heard: &ldquo;{transcript}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
               )}
             </div>
           )}
