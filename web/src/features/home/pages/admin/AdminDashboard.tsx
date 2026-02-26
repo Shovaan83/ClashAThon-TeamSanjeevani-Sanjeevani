@@ -2,11 +2,8 @@ import { NavLink, Outlet } from 'react-router-dom';
 
 export default function AdminDashboard() {
   const navItems = [
-    { name: 'Dashboard', path: '/admin/dashboard' },
     { name: 'Pharmacies', path: '/admin/pharmacies' },
     { name: 'KYCs', path: '/admin/kyc' },
-    { name: 'Users', path: '/admin/users' },
-    { name: 'Settings', path: '/admin/settings' },
   ];
 
   return (
