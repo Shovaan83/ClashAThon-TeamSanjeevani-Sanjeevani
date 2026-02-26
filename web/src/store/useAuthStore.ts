@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type UserRole = 'patient' | 'pharmacy';
+export type UserRole = 'patient' | 'pharmacy' | 'ADMIN';
 
 export interface User {
   id: string;
