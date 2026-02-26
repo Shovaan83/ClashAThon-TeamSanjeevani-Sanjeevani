@@ -232,7 +232,7 @@ class PharmacyResponseApiView(APIView):
                 {
                     'type': 'pharmacy_response',
                     'response_id': pharmacy_response.id,
-                    'request_id': request_id,
+                    'request_id': int(request_id),
                     'response_type': response_type,
                     'pharmacy_id': pharmacy.id,
                     'pharmacy_name': request.user.name,

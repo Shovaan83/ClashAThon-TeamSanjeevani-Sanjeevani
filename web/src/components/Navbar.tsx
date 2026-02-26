@@ -1,8 +1,60 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNotificationStore, type AppNotification } from '@/store/useNotificationStore';
 import { Volume2, X, CheckCircle2, XCircle, Repeat, Package, Star } from 'lucide-react';
+
+const LOGO_LETTERS = [
+  { d: 'M4 22 C4 14 12 9 22 9 L44 9 C54 9 60 14 60 22 C60 30 54 35 44 35 L22 35 C12 35 4 41 4 49 C4 57 12 62 22 62 L46 62 C56 62 63 57 63 49', color: '#2D5A40' },
+  { d: 'M76 62 L92 9 L108 62 M81 44 L103 44',                                                                                                    color: '#2D5A40' },
+  { d: 'M118 62 L118 9 L148 62 L148 9',                                                                                                           color: '#2D5A40' },
+  { d: 'M170 9 L170 50 C170 59 164 63 155 63 C146 63 140 58 140 50',                                                                              color: '#FF6B35' },
+  { d: 'M182 9 L182 62 M182 9 L214 9 M182 36 L210 36 M182 62 L214 62',                                                                            color: '#2D5A40' },
+  { d: 'M224 9 L224 62 M224 9 L256 9 M224 36 L252 36 M224 62 L256 62',                                                                            color: '#2D5A40' },
+  { d: 'M266 9 L282 62 L298 9',                                                                                                                    color: '#FF6B35' },
+  { d: 'M310 62 L326 9 L342 62 M315 44 L337 44',                                                                                                  color: '#2D5A40' },
+  { d: 'M352 62 L352 9 L382 62 L382 9',                                                                                                           color: '#2D5A40' },
+  { d: 'M400 9 L400 62',                                                                                                                           color: '#FF6B35' },
+] as const;
+
+const EASE_OUT: [number, number, number, number] = [0.4, 0, 0.2, 1];
+
+function NavLogo() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <img
+        src="/logo.png"
+        alt="Sanjeevani"
+        className="h-8 w-8 rounded-full border border-primary/20 object-contain"
+      />
+      <motion.svg
+        viewBox="0 0 410 72"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-7 w-auto"
+      >
+        {LOGO_LETTERS.map(({ d, color }, i) => (
+          <motion.path
+            key={i}
+            d={d}
+            stroke={color}
+            strokeWidth="5.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={{
+              pathLength: { delay: i * 0.06, duration: 0.6, ease: EASE_OUT },
+              opacity:    { delay: i * 0.06, duration: 0.2 },
+            }}
+          />
+        ))}
+      </motion.svg>
+    </div>
+  );
+}
 
 const PATIENT_LINKS = [
   { label: 'Home',        href: '/home' },
@@ -188,13 +240,8 @@ export default function Navbar() {
     <header className="flex items-center justify-between border-b border-primary/10 bg-white px-6 md:px-20 py-3 sticky top-0 z-50 shadow-sm">
       {/* Left: Logo + Nav */}
       <div className="flex items-center gap-8">
-        <Link to="/home" className="flex items-center gap-2 text-primary">
-          <span className="material-symbols-outlined text-[28px] text-primary">
-            medical_services
-          </span>
-          <h2 className="logo-font text-2xl leading-tight text-primary">
-            Sanjeevani
-          </h2>
+        <Link to="/home" aria-label="Sanjeevani home">
+          <NavLogo />
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
