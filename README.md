@@ -17,6 +17,9 @@ We tolerate this friction because we assume checking inventory requires physical
 **Sanjeevani** digitizes the question *"Do you have this?"* instead of forcing pharmacies to digitize their entire inventory. 
 Users broadcast their prescription to pharmacies within a specific radius. Pharmacies receive a real-time ping and simply reply "Yes" or "No". The user gets a live map of exactly who has the medicine right now.
 
+## 🏆 What Makes This Different
+Unlike traditional pharmacy apps that require shopkeepers to upload and maintain a full digital inventory (a behavioural change they'll never adopt), Sanjeevani requires **zero prior digitisation**. The entire system activates on demand — the patient asks, the pharmacist answers, the match happens in under 42 seconds.
+
 ---
 
 ## ✨ Groundbreaking Features
@@ -48,11 +51,14 @@ The web dashboard is built strictly using a **Bento Grid** architecture.
 ## 🛠️ Tech Stack
 This project uses a unified API architecture to serve both Web and Mobile clients in real-time.
 
-*   **Backend:** Python, Django, Django REST Framework (DRF)
-*   **Real-Time Engine:** Django Channels (WebSockets) + Redis
-*   **Database:** SQLite (Prototyping) / Spatial logic for geofencing
-*   **Web Frontend (Dashboard):** React.js, Tailwind CSS, shadcn/ui, Framer Motion
-*   **Mobile App (Patient/Pharmacy):** Flutter, Dart, `speech_to_text` for Voice API
+| Layer | Technology |
+|---|---|
+| **Backend** | Python, Django, Django REST Framework (DRF) |
+| **Real-Time Engine** | Django Channels (WebSockets) + Redis |
+| **Database** | SQLite (Prototyping) / Spatial logic for geofencing |
+| **Auth** | Firebase Authentication + JWT |
+| **Web Frontend** | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui, Framer Motion |
+| **Mobile App** | Flutter, Dart, `speech_to_text` for Voice API |
 
 ---
 
@@ -66,3 +72,68 @@ source env/bin/activate  # On Windows: env\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
+```
+
+### 2. Web Frontend (React)
+```bash
+cd web
+npm install
+npm run dev
+```
+
+### 3. Mobile App (Flutter)
+```bash
+cd mobile
+flutter pub get
+flutter run
+```
+
+> **Note:** Redis must be running locally for WebSocket support.  
+> `docker run -p 6379:6379 redis` or install Redis natively.
+
+---
+
+## 🔑 Environment Variables
+
+### Backend (`backend/.env`)
+```env
+SECRET_KEY=your_django_secret_key_here
+DEBUG=True
+REDIS_URL=redis://localhost:6379
+ALLOWED_HOSTS=localhost,127.0.0.1
+```
+
+### Firebase (`backend/firebase-credentials.json`)
+Place your Firebase service account JSON file at `backend/firebase-credentials.json`.  
+Download it from **Firebase Console → Project Settings → Service Accounts → Generate new private key**.
+
+### Web Frontend (`web/.env`)
+```env
+VITE_API_BASE_URL=http://localhost:8000
+VITE_WS_BASE_URL=ws://localhost:8000
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+```
+
+---
+
+## 🌐 Deployment
+
+| Platform | Link |
+|---|---|
+| **Web App (Pharmacy Dashboard)** | _Coming soon_ |
+| **Mobile APK (Patient App)** | _Coming soon_ |
+| **Backend API** | _Coming soon_ |
+
+---
+
+## 👥 Team Members
+
+| Name | Role |
+|---|---|
+| **Shovan Bhattai** | Full-Stack & Web Lead |
+| **Abhishek Sharma** | Full Stack & Mobile Lead |
+| **Sudan Khadka** | Full Stack & Backend Lead|
+| **Raghav Dahal** | Full Stack & Backend Lead |
+| **Pranisha Karki** | Full Stack & Web Lead |
