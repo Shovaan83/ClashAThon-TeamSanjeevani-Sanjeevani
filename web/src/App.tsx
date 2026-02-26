@@ -15,6 +15,12 @@ import MedicineRequestHistory from "./features/home/MedicineRequestHistory";
 import IncomingRequestModal from "./features/home/components/IncomingRequestModal";
 import { useRequestStore } from "./store/useRequestStore";
 import PharmacyAnalyticsPage from "./features/home/pages/PharmacyAnalyticsPage";
+import GeneralProtectedRoute from './components/AdminProtectedRoute';
+import AdminDashboard from './features/home/pages/admin/AdminDashboard';
+import KycPage from './features/home/pages/admin/KycPage';
+import AdminPharmaciesPage from './features/home/pages/admin/AdminPharmaciesPage';
+import AdminOverviewPage from './features/home/pages/admin/AdminOverviewPage';
+import AdminUsersPage from './features/home/pages/admin/AdminUsersPage';
 
 
 function DashboardRedirect() {
@@ -57,6 +63,22 @@ export default function App() {
         <Route path="/dashboard/pharmacy" element={<ProtectedRoute><PharmacyDashboardPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardRedirect /></ProtectedRoute>} />
 
+        {/* admin dashboard */}
+
+        <Route
+  path="/admin"
+  element={
+    <GeneralProtectedRoute allowedRoles={['ADMIN']}>
+      <AdminDashboard />
+    </GeneralProtectedRoute>
+  }
+>
+  <Route index element={<Navigate to="/admin/kyc" replace />} />
+  <Route path="dashboard" element={<AdminOverviewPage />} />
+  <Route path="pharmacies" element={<AdminPharmaciesPage />} />
+  <Route path="kyc" element={<KycPage />} />
+  <Route path="users" element={<AdminUsersPage />} />
+</Route>
         {/* Profile */}
         <Route path="/profile" element={<ProtectedRoute><PatientProfilePage /></ProtectedRoute>} />
 

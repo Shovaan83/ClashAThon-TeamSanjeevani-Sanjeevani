@@ -13,7 +13,7 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Load task modules from all registered Django apps.
 # Explicitly include DailyRemainder to guarantee its tasks.py is found
 # (the capitalised app name can trip up autodiscovery on some platforms).
-app.autodiscover_tasks(['DailyRemainder', 'utils'])
+app.autodiscover_tasks(['DailyRemainder', 'fomo', 'utils'])
 
 
 @app.task(bind=True)

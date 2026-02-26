@@ -1,0 +1,32 @@
+{
+  "responseRate": {
+    "total_requests": 142,
+    "responded": 118,
+    "rate": 83.1
+  },
+  "avgResponseTime": {
+    "avg_minutes": 3.2,
+    "benchmark": "good"
+  },
+  "weeklyFomoTrend": [
+    { "day": "Sun", "lost": 1200 },
+    { "day": "Mon", "lost": 3400 },
+    { "day": "Tue", "lost": 2800 },
+    { "day": "Wed", "lost": 4250 },
+    { "day": "Thu", "lost": 1900 },
+    { "day": "Fri", "lost": 3100 },
+    { "day": "Sat", "lost": 2200 }
+  ],
+  "topMissedMedicines": [
+    { "name": "Paracetamol 500mg", "count": 12, "total_lost": 1800 },
+    { "name": "Amoxicillin 250mg", "count": 9, "total_lost": 2880 },
+    { "name": "Cetirizine 10mg", "count": 7, "total_lost": 560 },
+    { "name": "Omeprazole 20mg", "count": 5, "total_lost": 750 },
+    { "name": "Metformin 500mg", "count": 4, "total_lost": 480 }
+  ],
+  "responseBreakdown": {
+    "accepted": 82,
+    "rejected": 21,
+    "substituted": 15
+  }
+}

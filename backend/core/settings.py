@@ -57,7 +57,9 @@ INSTALLED_APPS = [
     'customer',
     'accountsprofile',
     'DailyRemainder',
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist',
+    'adminapis',
+    'fomo',
 ]
 
 MIDDLEWARE = [
@@ -143,7 +145,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kathmandu'
 
 USE_I18N = True
 
@@ -214,6 +216,10 @@ CELERY_BEAT_SCHEDULE = {
     'send-reminder-notifications': {
         'task': 'DailyRemainder.tasks.send_reminder_notifications',
         'schedule': crontab(minute='*/5'),  # Run every 5 minutes
+    },
+    'record-timed-out-fomo': {
+        'task': 'fomo.tasks.record_timed_out_requests',
+        'schedule': crontab(minute='*/10'),  # Run every 10 minutes
     },
 }
 

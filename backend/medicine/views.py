@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from decimal import Decimal
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -206,6 +207,18 @@ class PharmacyResponseApiView(APIView):
 
             # Request stays PENDING — the patient now picks which pharmacy to use.
             # The status will only change to ACCEPTED via POST /medicine/select/.
+
+            # Record missed opportunity when pharmacy rejects a request
+            if response_type == 'REJECTED':
+                try:
+                    from fomo.models import MissedOpportunity
+                    MissedOpportunity.objects.create(
+                        pharmacy=pharmacy,
+                        item_name=f"Request #{medicine_request.id}",
+                        amount_lost=Decimal('150.00'),
+                    )
+                except Exception:
+                    pass
 
             # Send real-time notification to patient
             channel_layer = get_channel_layer()

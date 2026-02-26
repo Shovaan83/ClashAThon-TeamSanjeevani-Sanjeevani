@@ -27,7 +27,9 @@ export default function LoginForm() {
     try {
       const res = await api.login(data.email, data.password);
       const { user, tokens } = res.data;
+      console.log("This is user",user)
       const role = mapBackendRole(user.role);
+      console.log("This is role",role)
 
       login(tokens.access, {
         id: String(user.id),
