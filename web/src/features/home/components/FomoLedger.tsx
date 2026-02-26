@@ -5,8 +5,13 @@ import {
   XAxis,
   Tooltip,
   ResponsiveContainer,
-  type TooltipProps,
 } from 'recharts';
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value?: number; name?: string }>;
+  label?: string;
+}
 import { TrendingDown, AlertCircle, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 
@@ -50,7 +55,7 @@ const DUMMY: FomoData = {
 
 // ─── Custom tooltip for the bar chart ────────────────────────────────────────
 
-function FomoTooltip({ active, payload, label }: TooltipProps<number, string>) {
+function FomoTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-stone-200 px-3 py-2 text-xs shadow-sm">

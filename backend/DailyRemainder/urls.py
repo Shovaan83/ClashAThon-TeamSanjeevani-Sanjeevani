@@ -19,7 +19,10 @@ urlpatterns = [
     # Device token endpoints
     path('device-tokens/', views.DeviceTokenRegisterView.as_view(), name='device-token-register'),
     path('device-tokens/<int:pk>/', views.DeviceTokenDeleteView.as_view(), name='device-token-delete'),
-    
+
+    # Sync notifications (fallback when Celery Beat is not running)
+    path('sync-notifications/', views.SyncNotificationsView.as_view(), name='sync-notifications'),
+
     # Dashboard endpoint
     path('dashboard/', views.DashboardView.as_view(), name='dashboard'),
 ]

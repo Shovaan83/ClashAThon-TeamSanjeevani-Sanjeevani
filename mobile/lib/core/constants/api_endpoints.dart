@@ -95,4 +95,8 @@ class ApiEndpoints {
 
   /// GET  /api/daily-reminder/dashboard/
   static const String dailyDashboard = 'api/daily-reminder/dashboard/';
+
+  /// POST  /api/daily-reminder/sync-notifications/
+  static const String dailySyncNotifications =
+      'api/daily-reminder/sync-notifications/';
 }

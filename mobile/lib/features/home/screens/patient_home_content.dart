@@ -4,6 +4,7 @@ import 'package:sanjeevani/config/storage/storage_service.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/constants/routes.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
+import 'package:sanjeevani/features/daily_rem/services/daily_reminder_service.dart';
 import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model.dart';
 import 'package:sanjeevani/features/home/broadcast/models/pharmacy_response_model.dart';
 import 'package:sanjeevani/features/home/broadcast/screens/pharmacy_offers_screen.dart';
@@ -28,6 +29,7 @@ class PatientHomeContent extends StatefulWidget {
 
 class _PatientHomeContentState extends State<PatientHomeContent> {
   final CustomerService _customerService = CustomerService();
+  final DailyReminderService _reminderService = DailyReminderService();
 
   late Future<List<MedicineRequestModel>> _broadcastsFuture;
   String _userName = 'Patient';
@@ -37,6 +39,8 @@ class _PatientHomeContentState extends State<PatientHomeContent> {
     super.initState();
     _broadcastsFuture = _customerService.getMyRequests();
     _loadUserName();
+    // Ask backend to fire any pending medication reminders now.
+    _reminderService.syncNotifications();
   }
 
   Future<void> _loadUserName() async {
@@ -68,7 +72,7 @@ class _PatientHomeContentState extends State<PatientHomeContent> {
                 children: [
                   // ── Greeting ────────────────────────────────
                   Text(
-                    'Hello, $_userName 👋',
+                    'Hello, $_userName',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),

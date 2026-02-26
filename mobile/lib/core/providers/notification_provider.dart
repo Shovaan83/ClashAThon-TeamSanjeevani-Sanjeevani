@@ -279,7 +279,7 @@ class NotificationProvider extends ChangeNotifier {
     final notification = AppNotification(
       id: 'selected_$requestId',
       type: 'pharmacy_selected',
-      title: 'You were selected! 🎉',
+      title: 'You were selected!',
       body: '$patientName chose your pharmacy for their prescription.',
       payload: msg,
       timestamp: DateTime.now(),

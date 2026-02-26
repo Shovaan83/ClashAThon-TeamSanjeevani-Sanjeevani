@@ -86,7 +86,7 @@ def notify_pharmacies_new_request(
 
         _safe_send_multicast(
             tokens=tokens,
-            title="📋 New Medicine Request",
+            title="New Medicine Request",
             body=f"{patient_name} needs medicine — {distance:.1f} km away (Qty: {quantity})",
             data={
                 'type': 'new_request',
@@ -114,7 +114,7 @@ def notify_patient_pharmacy_response(
         return
 
     if response_type == 'ACCEPTED':
-        title = "💊 Pharmacy Offer Received!"
+        title = "Pharmacy Offer Received"
         body = f"{pharmacy_name} has offered to fulfil your prescription."
     else:
         title = "Pharmacy Declined"
@@ -150,7 +150,7 @@ def notify_pharmacy_selected(
 
     _safe_send_multicast(
         tokens=tokens,
-        title="🎉 You were selected!",
+        title="You were selected!",
         body=f"{patient_name} chose your pharmacy. Please prepare the medicine!",
         data={
             'type': 'pharmacy_selected',

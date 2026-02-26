@@ -146,7 +146,7 @@ export default function PharmacyDashboardPage() {
             <AlertCircle size={16} className="shrink-0" />
             <p className="text-sm font-medium">{fetchError}</p>
             <button
-              onClick={fetchExistingRequests}
+              onClick={() => fetchExistingRequests()}
               className="ml-auto text-xs font-bold underline underline-offset-2"
             >
               Retry
