@@ -1,7 +1,7 @@
 import { useAuthStore } from '@/store/useAuthStore';
-
 import Navbar from '@/components/Navbar';
 import HeroSection from '../components/HeroSection';
+import HowItWorksSection from '../components/HowItWorksSection';
 import HomeFooter from '../components/HomeFooter';
 
 export default function HomePage() {
@@ -13,6 +13,7 @@ export default function HomePage() {
 
       <main className="flex-1">
         <HeroSection role={user?.role ?? null} />
+        <HowItWorksSection />
       </main>
 
       <HomeFooter />
