@@ -30,6 +30,7 @@ class PharmacyDocument(models.Model):
     is_active = models.BooleanField(default=True)
     status = models.CharField(max_length=20, default="PENDING", choices=Status)
     created_at = models.DateTimeField(auto_now_add=True)
+    message = models.CharField(max_length=200,blank=True,null=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

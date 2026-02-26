@@ -118,7 +118,7 @@ function extractError(err: unknown, fallback: string): string {
 // ─── Role mapping ─────────────────────────────────────────────────────────────
 
 export function mapBackendRole(role: string): UserRole {
-  return role === 'CUSTOMER' ? 'patient' : 'pharmacy';
+  return role === 'CUSTOMER' ? 'patient' :role==='ADMIN'? 'ADMIN': 'pharmacy';
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -319,4 +319,92 @@ export const api = {
       throw new Error(extractError(err, 'Failed to fetch request history.'));
     }
   },
+
+  async logoutUser(refreshToken: string): Promise<void> {
+  try {
+    await apiClient.post('/logout', {
+      refresh: refreshToken,
+    });
+  } catch (err) {
+    console.warn('Backend logout failed, clearing session anyway.');
+  }
+},
+
+
+// ─── Admin APIs ───────────────────────────────────────────────────────────────
+
+/**
+ * Get all pharmacy documents/KYC requests (admin only)
+ * GET /admin/api/pharmacy-documents/
+ * Supports pagination: ?page=1&page_size=10&status=PENDING
+ */
+async getPharmacyDocuments(params?: { page?: number; page_size?: number; status?: string }) {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    
+    const queryString = queryParams.toString();
+    const url = `/admin/api/pharmacy-documents/${queryString ? '?' + queryString : ''}`;
+    const res = await apiClient.get(url);
+    return res.data;
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to fetch pharmacy documents.'));
+  }
+},
+
+/**
+ * Get all pharmacies (admin only)
+ * GET /admin/api/pharmacies/
+ * Supports pagination: ?page=1&page_size=10&status=PENDING&search=query
+ */
+async getPharmacies(params?: { page?: number; page_size?: number; status?: string; search?: string }) {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.search) queryParams.append('search', params.search);
+    
+    const url = `/admin/api/pharmacies/${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const res = await apiClient.get(url);
+    return res.data;
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to fetch pharmacies.'));
+  }
+},
+
+/**
+ * Get pharmacy detail (admin only)
+ * GET /admin/api/pharmacy/:id/
+ */
+async getPharmacyDetail(id: number) {
+  try {
+    const res = await apiClient.get(`/admin/api/pharmacy/${id}/`);
+    return res.data;
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to fetch pharmacy detail.'));
+  }
+},
+
+/**
+ * Approve or reject pharmacy KYC (admin only)
+ * POST /admin/api/pharmacy/:id/kyc/
+ */
+async kycAction(pharmacyId: number, action: 'APPROVE' | 'REJECT', message?: string) {
+  try {
+    const res = await apiClient.post(`/admin/api/pharmacy/${pharmacyId}/kyc/`, {
+      action,
+      message: message || '',
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(extractError(err, `Failed to ${action.toLowerCase()} pharmacy.`));
+  }
+}
 };
+
+
+
+
