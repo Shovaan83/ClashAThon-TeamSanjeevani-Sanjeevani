@@ -111,10 +111,22 @@ class AlarmListCreateView(ResponseMixin, APIView):
         )
     
     def post(self, request):
-        """Create a new alarm."""
+        """Create a new alarm and generate occurrences for the date range."""
         serializer = AlarmSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save()
+            alarm = serializer.save()
+
+            # Generate occurrences immediately for today through end_date (or +7 days)
+            from datetime import date as _date, timedelta as _td
+            from DailyRemainder.services.occurance_generator import generate_occurrences_for_alarm
+
+            today = _date.today()
+            end = alarm.end_date if alarm.end_date else today + _td(days=7)
+            current = today
+            while current <= end:
+                generate_occurrences_for_alarm(alarm, current)
+                current += _td(days=1)
+
             return self.success_response(
                 data=serializer.data,
                 message="Alarm created successfully",
@@ -154,7 +166,19 @@ class AlarmDetailView(ResponseMixin, APIView):
         
         serializer = AlarmSerializer(alarm, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
-            serializer.save()
+            alarm = serializer.save()
+
+            # Re-generate future occurrences after update
+            from datetime import date as _date, timedelta as _td
+            from DailyRemainder.services.occurance_generator import generate_occurrences_for_alarm
+
+            today = _date.today()
+            end = alarm.end_date if alarm.end_date else today + _td(days=7)
+            current = today
+            while current <= end:
+                generate_occurrences_for_alarm(alarm, current)
+                current += _td(days=1)
+
             return self.success_response(
                 data=serializer.data,
                 message="Alarm updated successfully"
@@ -299,6 +323,94 @@ class DeviceTokenDeleteView(ResponseMixin, APIView):
             return self.success_response(message="Device token deactivated successfully")
         except DeviceToken.DoesNotExist:
             return self.not_found_response("Device token not found")
+
+
+# -------------------------
+# Sync Notifications View
+# -------------------------
+class SyncNotificationsView(ResponseMixin, APIView):
+    """
+    Trigger an immediate notification check for the authenticated user.
+
+    The mobile app should call this endpoint:
+      • when it opens / returns to foreground
+      • periodically while active (e.g. every 2 minutes)
+
+    This provides a reliable fallback that works even when the Celery Beat
+    scheduler is not running.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from datetime import timedelta as _td
+        from utils.firebase import send_notification, TokenUnregisteredException, is_firebase_available, initialize_firebase
+
+        if not is_firebase_available():
+            initialize_firebase()
+        if not is_firebase_available():
+            return self.error_response(message="Push notification service unavailable")
+
+        now = timezone.now()
+        window_start = now - _td(minutes=5)
+        window_end = now + _td(minutes=10)
+
+        user = request.user
+        upcoming = AlarmOccurrence.objects.filter(
+            alarm__medicine__user=user,
+            status=AlarmOccurrence.STATUS_SCHEDULED,
+            notified=False,
+            scheduled_at__gte=window_start,
+            scheduled_at__lte=window_end,
+        ).select_related('alarm__medicine')
+
+        active_tokens = DeviceToken.objects.filter(user=user, is_active=True)
+        if not active_tokens.exists():
+            return self.success_response(
+                data={'sent': 0, 'pending': upcoming.count()},
+                message="No active device tokens registered",
+            )
+
+        sent = 0
+        for occ in upcoming:
+            medicine_name = occ.alarm.medicine.name
+            # Use the alarm's local timezone for the displayed time
+            import pytz as _pytz
+            alarm_tz = _pytz.timezone(occ.alarm.timezone)
+            local_scheduled = occ.scheduled_at.astimezone(alarm_tz)
+            scheduled_time = local_scheduled.strftime('%I:%M %p')
+
+            ok = False
+            for dt in active_tokens:
+                try:
+                    success = send_notification(
+                        token=dt.token,
+                        title=f"Time for {medicine_name}",
+                        body=f"Your {medicine_name} dose is scheduled at {scheduled_time}. Don't miss it!",
+                        data={
+                            'occurrence_id': str(occ.id),
+                            'alarm_id': str(occ.alarm.id),
+                            'medicine_name': medicine_name,
+                            'scheduled_at': occ.scheduled_at.isoformat(),
+                            'type': 'medication_reminder',
+                        },
+                    )
+                    if success:
+                        ok = True
+                        sent += 1
+                except TokenUnregisteredException:
+                    dt.is_active = False
+                    dt.save(update_fields=['is_active'])
+                except Exception:
+                    pass
+
+            if ok:
+                occ.notified = True
+                occ.save(update_fields=['notified'])
+
+        return self.success_response(
+            data={'sent': sent, 'pending': upcoming.count()},
+            message=f"Sent {sent} notification(s)",
+        )
 
 
 # -------------------------

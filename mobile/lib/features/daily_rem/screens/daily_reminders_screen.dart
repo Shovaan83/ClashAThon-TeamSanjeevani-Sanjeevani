@@ -37,6 +37,8 @@ class _DailyRemindersScreenState extends State<DailyRemindersScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadAll();
+    // Trigger backend to send any pending push notifications now.
+    _service.syncNotifications();
   }
 
   @override

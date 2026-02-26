@@ -87,6 +87,16 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
       );
       return;
     }
+    if (_timesPerDay > 1 && _endTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please set an end time when taking more than 1 dose per day',
+          ),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
@@ -231,13 +241,21 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _timeTile(
-                    'To (optional)',
+                    _timesPerDay > 1 ? 'To (required)' : 'To (optional)',
                     _endTime,
                     () => _pickTime(false),
                   ),
                 ),
               ],
             ),
+            if (_timesPerDay > 1 && _endTime == null)
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Text(
+                  'Set an end time so doses are spread evenly across the window.',
+                  style: TextStyle(fontSize: 11, color: AppColors.error),
+                ),
+              ),
             const SizedBox(height: 20),
 
             // Times per day

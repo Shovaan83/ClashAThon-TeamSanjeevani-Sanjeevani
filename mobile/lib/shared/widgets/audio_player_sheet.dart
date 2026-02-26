@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sanjeevani/config/theme/app_theme.dart';
 
@@ -52,10 +53,18 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
   late final StreamSubscription<Duration> _durSub;
   late final StreamSubscription<PlayerState> _stateSub;
   late final StreamSubscription<void> _completeSub;
+  StreamSubscription<String>? _logSub;
 
   @override
   void initState() {
     super.initState();
+
+    debugPrint('[AudioPlayerSheet] Opening with URL: ${widget.url}');
+
+    // Listen for platform log events (includes native errors)
+    _logSub = _player.onLog.listen((msg) {
+      debugPrint('[AudioPlayer-native] $msg');
+    });
 
     _posSub = _player.onPositionChanged.listen((p) {
       if (mounted) setState(() => _position = p);
@@ -81,6 +90,7 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
 
   @override
   void dispose() {
+    _logSub?.cancel();
     _posSub.cancel();
     _durSub.cancel();
     _stateSub.cancel();
@@ -91,10 +101,18 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
 
   Future<void> _play() async {
     try {
+      debugPrint('[AudioPlayerSheet] Playing URL: ${widget.url}');
       await _player.play(UrlSource(widget.url));
-      _error = null;
+      if (mounted) setState(() => _error = null);
     } catch (e) {
-      if (mounted) setState(() => _error = 'Unable to play audio');
+      debugPrint('[AudioPlayerSheet] Playback error: $e');
+      debugPrint('[AudioPlayerSheet] URL was: ${widget.url}');
+      if (mounted) {
+        setState(
+          () => _error =
+              'Unable to play audio: ${e.toString().length > 80 ? e.toString().substring(0, 80) : e}',
+        );
+      }
     }
   }
 
@@ -167,8 +185,16 @@ class _AudioPlayerSheetState extends State<AudioPlayerSheet> {
               Text(
                 _error!,
                 style: const TextStyle(color: AppColors.error, fontSize: 13),
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: _play,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Retry'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+              ),
+              const SizedBox(height: 4),
             ],
 
             // Seek bar

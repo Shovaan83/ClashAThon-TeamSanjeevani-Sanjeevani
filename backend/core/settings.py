@@ -143,11 +143,36 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kathmandu'
 
 USE_I18N = True
 
 USE_TZ = True
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'DailyRemainder': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
 
 
 # Static files (CSS, JavaScript, Images)
@@ -196,7 +221,7 @@ CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
+CELERY_TIMEZONE = 'Asia/Kathmandu'
 CELERY_TASK_ALWAYS_EAGER = False  # Set to True for debugging without Celery worker
 
 # Celery Beat Schedule (Periodic Tasks)
@@ -213,7 +238,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     'send-reminder-notifications': {
         'task': 'DailyRemainder.tasks.send_reminder_notifications',
-        'schedule': crontab(minute='*/5'),  # Run every 5 minutes
+        'schedule': crontab(minute='*/2'),  # Run every 2 minutes
     },
 }
 
