@@ -176,6 +176,25 @@ class DailyReminderService {
     );
   }
 
+  // ── Sync Notifications ─────────────────────────────────────────────────────
+
+  /// POST /api/daily-reminder/sync-notifications/
+  ///
+  /// Tells the backend to check for pending medicine reminders right now
+  /// and send FCM push notifications immediately. Call this when the app
+  /// comes to the foreground or periodically while it is active.
+  Future<void> syncNotifications() async {
+    try {
+      await _api.post(
+        ApiEndpoints.dailySyncNotifications,
+        body: {},
+        requiresAuth: true,
+      );
+    } catch (_) {
+      // Best-effort — don't crash the app if this fails.
+    }
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   /// Backend wraps payload in `{"status":"success","data":<payload>}`.

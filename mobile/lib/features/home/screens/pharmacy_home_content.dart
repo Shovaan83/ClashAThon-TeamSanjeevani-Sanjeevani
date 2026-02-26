@@ -7,6 +7,7 @@ import 'package:sanjeevani/config/theme/app_theme.dart';
 import 'package:sanjeevani/core/providers/notification_provider.dart';
 import 'package:sanjeevani/features/home/broadcast/models/medicine_request_model.dart';
 import 'package:sanjeevani/features/home/screens/request_detail_screen.dart';
+import 'package:sanjeevani/features/home/services/pharmacy_profile_service.dart';
 import 'package:sanjeevani/shared/utils/time_utils.dart';
 import 'package:sanjeevani/shared/widgets/voice_recorder_sheet.dart';
 
@@ -23,11 +24,13 @@ class PharmacyHomeContent extends StatefulWidget {
 
 class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
   String _pharmacyName = 'Pharmacy';
+  String? _documentStatus; // PENDING, APPROVED, REJECTED
 
   @override
   void initState() {
     super.initState();
     _loadPharmacyName();
+    _loadDocumentStatus();
 
     // Initialise the provider (WebSocket + fetch requests) after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -39,6 +42,19 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
     final name = await StorageService().getUserName();
     if (mounted && name != null && name.isNotEmpty) {
       setState(() => _pharmacyName = name);
+    }
+  }
+
+  Future<void> _loadDocumentStatus() async {
+    try {
+      final data = await PharmacyProfileService().getProfile();
+      if (mounted && data is Map<String, dynamic>) {
+        setState(() {
+          _documentStatus = data['document_status'] as String?;
+        });
+      }
+    } catch (_) {
+      // Silently ignore — status banner simply won't show
     }
   }
 
@@ -65,7 +81,7 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
                     children: [
                       // ── Greeting ──────────────────────────
                       Text(
-                        'Hello, $_pharmacyName 🏥',
+                        'Hello, $_pharmacyName',
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
@@ -78,6 +94,72 @@ class _PharmacyHomeContentState extends State<PharmacyHomeContent> {
                       ),
 
                       const SizedBox(height: 20),
+
+                      // ── Verification status banner ────────
+                      if (_documentStatus != null &&
+                          _documentStatus != 'APPROVED')
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _documentStatus == 'REJECTED'
+                                ? AppColors.error.withValues(alpha: 0.08)
+                                : AppColors.accent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _documentStatus == 'REJECTED'
+                                  ? AppColors.error.withValues(alpha: 0.3)
+                                  : AppColors.accent.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _documentStatus == 'REJECTED'
+                                    ? Icons.cancel_outlined
+                                    : Icons.hourglass_top_rounded,
+                                color: _documentStatus == 'REJECTED'
+                                    ? AppColors.error
+                                    : AppColors.accent,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _documentStatus == 'REJECTED'
+                                          ? 'Document Rejected'
+                                          : 'Pending - Not Verified',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 13,
+                                        color: _documentStatus == 'REJECTED'
+                                            ? AppColors.error
+                                            : AppColors.accent,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _documentStatus == 'REJECTED'
+                                          ? 'Your pharmacy document was rejected. Please upload a valid document.'
+                                          : 'Your pharmacy is awaiting admin verification. Some features may be limited.',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                       // ── Connection status ─────────────────
                       _ConnectionStatusChip(connected: provider.isConnected),

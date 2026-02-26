@@ -549,18 +549,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: _documentStatus == 'VERIFIED'
-                                  ? AppColors.primary.withValues(alpha: 0.1)
+                              color: _documentStatus == 'APPROVED'
+                                  ? AppColors.success.withValues(alpha: 0.1)
+                                  : _documentStatus == 'REJECTED'
+                                  ? AppColors.error.withValues(alpha: 0.1)
                                   : AppColors.accent.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              _documentStatus!,
+                              _documentStatus == 'APPROVED'
+                                  ? 'Verified'
+                                  : _documentStatus == 'REJECTED'
+                                  ? 'Rejected'
+                                  : 'Pending - Not Verified',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: _documentStatus == 'VERIFIED'
-                                    ? AppColors.primary
+                                color: _documentStatus == 'APPROVED'
+                                    ? AppColors.success
+                                    : _documentStatus == 'REJECTED'
+                                    ? AppColors.error
                                     : AppColors.accent,
                               ),
                             ),

@@ -146,6 +146,11 @@ class AlarmOccurrence(models.Model):
         default=STATUS_SCHEDULED,
     )
 
+    notified = models.BooleanField(
+        default=False,
+        help_text="True once a push notification has been sent for this occurrence.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -109,6 +109,10 @@ class FcmService {
 
     final initial = await _messaging.getInitialMessage();
     if (initial != null) _handleNotificationTap(initial);
+
+    // Ask the backend to push any pending medication reminders right now.
+    // This ensures the user gets notified even when Celery Beat is not running.
+    _reminderService.syncNotifications();
   }
 
   // ── Token registration ────────────────────────────────────────────────────
