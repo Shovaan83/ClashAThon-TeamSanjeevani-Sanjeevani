@@ -86,17 +86,13 @@ class _EmailScreenState extends State<EmailScreen> {
                 // ── Logo & branding ──────────────────────────
                 Row(
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.local_hospital,
-                        color: Colors.white,
-                        size: 18,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/image.png',
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(width: 10),
