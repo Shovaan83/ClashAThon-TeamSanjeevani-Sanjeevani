@@ -4,10 +4,10 @@ import type { UserRole } from '@/store/useAuthStore';
 
 // ─── Axios instance ───────────────────────────────────────────────────────────
 
-export const WS_BASE_URL = 'ws://127.0.0.1:8000';
+export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL as string ?? 'ws://127.0.0.1:8000';
 
 export const apiClient = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL as string ?? 'http://127.0.0.1:8000',
   headers: { 'Content-Type': 'application/json' },
 });
 
