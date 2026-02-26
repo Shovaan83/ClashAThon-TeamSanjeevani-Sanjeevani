@@ -22,6 +22,9 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    # Admin API must come before Django admin to prevent conflict
+    path('admin/api/', include('adminapis.urls')),
+    
     path('admin/', admin.site.urls),
     
     # Customer app - all customer-related endpoints
