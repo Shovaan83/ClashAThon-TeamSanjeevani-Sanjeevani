@@ -6,8 +6,13 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  type TooltipProps,
 } from 'recharts';
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value?: number; name?: string }>;
+  label?: string;
+}
 import { TrendingUp } from 'lucide-react';
 import { api } from '@/lib/api';
 import fallback from '@/data/analyticsData.json';
@@ -17,7 +22,7 @@ interface TrendEntry {
   lost: number;
 }
 
-function WeeklyTooltip({ active, payload, label }: TooltipProps<number, string>) {
+function WeeklyTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-stone-200 px-3 py-2 text-xs shadow-sm">

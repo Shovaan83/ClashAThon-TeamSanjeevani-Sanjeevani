@@ -15,7 +15,7 @@ interface EmailStepProps {
   onSubmit: (email: string) => void;
 }
 
-export default function EmailStep({ role, onRoleChange, onSubmit }: EmailStepProps) {
+export default function EmailStep({ onRoleChange, onSubmit }: EmailStepProps) {
   const {
     register,
     handleSubmit,

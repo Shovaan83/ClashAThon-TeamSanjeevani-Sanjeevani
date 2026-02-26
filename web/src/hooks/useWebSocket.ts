@@ -51,9 +51,9 @@ export function usePharmacyWebSocket(callbacks?: PharmacyWsCallbacks) {
   const token = useAuthStore((s) => s.token);
   const { addPendingRequest, removePendingRequest, showRequest } = useRequestStore();
   const wsRef = useRef<WebSocket | null>(null);
-  const pingRef = useRef<ReturnType<typeof setInterval>>();
+  const pingRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const reconnectAttempt = useRef(0);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const unmounted = useRef(false);
   const [connected, setConnected] = useState(false);
 
@@ -234,9 +234,9 @@ export function useCustomerWebSocket(
 ) {
   const token = useAuthStore((s) => s.token);
   const wsRef = useRef<WebSocket | null>(null);
-  const pingRef = useRef<ReturnType<typeof setInterval>>();
+  const pingRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const reconnectAttempt = useRef(0);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const unmounted = useRef(false);
 
   // Keep callback in a ref so it never invalidates the connect function

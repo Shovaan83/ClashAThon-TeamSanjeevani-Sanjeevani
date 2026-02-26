@@ -5,8 +5,12 @@ import {
   Cell,
   Tooltip,
   ResponsiveContainer,
-  type TooltipProps,
 } from 'recharts';
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value?: number; name?: string; payload?: { fill?: string } }>;
+}
 import { BarChart2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import fallback from '@/data/analyticsData.json';
@@ -19,12 +23,12 @@ interface BreakdownData {
 
 const COLORS = ['#2D5A40', '#FF6B35', '#3B82F6'];
 
-function BreakdownTooltip({ active, payload }: TooltipProps<number, string>) {
+function BreakdownTooltip({ active, payload }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-stone-200 px-3 py-2 text-xs shadow-sm">
       <p className="font-bold text-[#1C1917] mb-0.5">{payload[0].name}</p>
-      <p className="font-semibold" style={{ color: payload[0].payload.fill }}>
+      <p className="font-semibold" style={{ color: payload[0].payload?.fill }}>
         {payload[0].value} requests
       </p>
     </div>
